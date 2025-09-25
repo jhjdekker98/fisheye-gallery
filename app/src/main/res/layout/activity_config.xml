@@ -1,93 +1,151 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:orientation="vertical"
-              android:padding="24dp"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent">
-
-    <TextView
-            android:text="Selected Folder"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-    <TextView
-            android:id="@+id/txtFolderPath"
-            android:text="/storage/emulated/0/DCIM/Camera"
+<ScrollView
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+    <LinearLayout
+            android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="8dp"
-            android:background="?attr/colorBackgroundFloating"
-            android:scrollHorizontally="true"
-            android:ellipsize="marquee"
-            android:singleLine="true"/>
-
-    <Button
-            android:id="@+id/btnPickFolder"
-            android:text="Pick Folder"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"/>
-
-    <TextView
-            android:text="Maximum Depth (0 = unlimited)"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"/>
-    <EditText
-            android:id="@+id/editDepth"
-            android:inputType="number"
-            android:hint="0"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-    <TextView
-            android:text="Images per row"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"/>
-
-    <EditText
-            android:id="@+id/editColumns"
-            android:inputType="number"
-            android:hint="3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-    <TextView
-            android:text="Theme Mode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:paddingBottom="8dp"/>
-
-    <RadioGroup
-            android:id="@+id/themeRadioGroup"
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content">
 
-        <RadioButton
-                android:id="@+id/themeRadioLight"
+        <!-- Menu Header -->
+        <TextView
+                android:id="@+id/headerSettings"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Light"/>
+                android:text="Settings"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:paddingBottom="8dp"/>
 
-        <RadioButton
-                android:id="@+id/themeRadioDark"
+        <!-- File scan header -->
+        <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Dark"/>
+                android:text="File scan"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:paddingTop="24dp"
+                android:paddingBottom="8dp"/>
 
-        <RadioButton
-                android:id="@+id/themeRadioSystem"
+        <!-- MediaStore Checkbox -->
+        <CheckBox
+                android:id="@+id/checkMediaStore"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Follow System"
-                android:checked="true"/>
-    </RadioGroup>
+                android:text="Display files from MediaStore?"/>
 
-    <Button
-            android:id="@+id/btnSave"
-            android:text="Save Configuration"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"/>
-</LinearLayout>
+        <!-- SAF Folders List -->
+        <LinearLayout
+                android:id="@+id/folderListContainer"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+        </LinearLayout>
+
+        <Button
+                android:id="@+id/btnAddFolder"
+                android:text="Add Folder"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+        <!-- Scan depth -->
+        <TextView
+                android:text="Filesystem scan depth"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:paddingTop="16dp"/>
+        <TextView
+                android:text="(0 = unlimited)"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+        <EditText
+                android:id="@+id/editDepth"
+                android:inputType="number"
+                android:hint="0"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="4"/>
+
+        <View
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:background="?attr/dividerColor"/>
+
+        <!-- Look and Feel header -->
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Look and Feel"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:paddingTop="24dp"
+                android:paddingBottom="8dp"/>
+
+        <!-- Images per row -->
+        <TextView
+                android:text="Images per row"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:paddingTop="16dp"/>
+
+        <EditText
+                android:id="@+id/editColumns"
+                android:inputType="number"
+                android:hint="3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="4"/>
+
+        <!-- Theme radio buttons -->
+        <TextView
+                android:text="Theme Mode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:paddingTop="16dp"/>
+
+        <RadioGroup
+                android:id="@+id/themeRadioGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+            <RadioButton
+                    android:id="@+id/themeRadioLight"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Light"/>
+
+            <RadioButton
+                    android:id="@+id/themeRadioDark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dark"/>
+
+            <RadioButton
+                    android:id="@+id/themeRadioSystem"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Follow system"
+                    android:checked="true"/>
+        </RadioGroup>
+
+        <View
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:background="?attr/dividerColor"/>
+
+        <!-- Save button -->
+        <Button
+                android:id="@+id/btnSave"
+                android:text="Save Configuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"/>
+    </LinearLayout>
+</ScrollView>

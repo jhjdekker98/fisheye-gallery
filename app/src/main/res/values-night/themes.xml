@@ -5,6 +5,8 @@
         <item name="colorPrimary">@color/colorPrimaryDark</item>
         <item name="colorOnPrimary">@color/colorOnPrimaryDark</item>
         <item name="colorBackgroundFloating">@color/colorBackgroundFloatingDark</item>
+        <item name="colorOnBackground">@color/colorOnBackgroundDark</item>
         <item name="colorControlNormal">@color/colorOnPrimaryDark</item>
+        <item name="dividerColor">@color/dividerColorDark</item>
     </style>
 </resources>

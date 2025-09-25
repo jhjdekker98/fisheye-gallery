@@ -5,12 +5,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,11 +21,15 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.R;
-import com.jhjdekker98.fisheyegallery.adapter.ImageAdapter;
 import com.jhjdekker98.fisheyegallery.model.FileListViewModel;
+import com.jhjdekker98.fisheyegallery.model.mediaindexer.IMediaIndexer;
+import com.jhjdekker98.fisheyegallery.model.mediaindexer.MediaStoreIndexer;
+import com.jhjdekker98.fisheyegallery.ui.MediaAdapter;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private ImageAdapter imageAdapter;
+    private MediaAdapter adapter;
     private RecyclerView recyclerView;
     private FileListViewModel viewModel;
 
@@ -45,40 +47,25 @@ public class MainActivity extends AppCompatActivity {
         // RecyclerView
         setContentView(R.layout.activity_main);
         recyclerView = findViewById(R.id.recyclerView);
-        final int columns = prefs.getInt(Constants.SHARED_PREFS_KEY_COLUMNS, 3);
-        recyclerView.setLayoutManager(new GridLayoutManager(this, columns));
 
         // Toolbar
         final MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         // ViewModel
-        imageAdapter = new ImageAdapter(this, file -> {
-            Toast.makeText(this, "Clicked: " + file.getName(), Toast.LENGTH_SHORT).show();
+        adapter = new MediaAdapter();
+        final int columns = prefs.getInt(Constants.SHARED_PREFS_KEY_COLUMNS, 3);
+        final GridLayoutManager layoutManager = new GridLayoutManager(this, columns);
+        layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            @Override
+            public int getSpanSize(int i) {
+                return adapter.getItemViewType(i) == 0 ? columns : 1;
+            }
         });
-        recyclerView.setAdapter(imageAdapter);
-        viewModel = new ViewModelProvider(this,
-                ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()))
-                .get(FileListViewModel.class);
-        viewModel.getMediaFiles().observe(this, documentFiles -> {
-            imageAdapter.setItems(documentFiles);
-        });
 
-        loadFiles();
-    }
-
-    private void loadFiles() {
-        if (viewModel == null) {
-            return;
-        }
-        final SharedPreferences prefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE);
-
-        final String folderUriString = prefs.getString(Constants.SHARED_PREFS_KEY_FOLDER, null);
-        if (folderUriString != null) {
-            final Uri folderUri = Uri.parse(folderUriString);
-            final int maxDepth = prefs.getInt(Constants.SHARED_PREFS_KEY_DEPTH, 0);
-            viewModel.loadFromTreeUri(folderUri, maxDepth);
-        } // TODO: Else show error
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setAdapter(adapter);
+        initViewModelAndLoad();
     }
 
     private void checkPermissions() {
@@ -99,14 +86,14 @@ public class MainActivity extends AppCompatActivity {
             if (needsRequest) {
                 ActivityCompat.requestPermissions(this, permissions, Constants.PERMISSION_REQUEST_ID);
             } else {
-                loadFiles();
+                initViewModelAndLoad();
             }
         } else {
             // For older versions of android, just rely on the legacy READ_EXTERNAL_STORAGE permission
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, Constants.PERMISSION_REQUEST_ID);
             } else {
-                loadFiles();
+                initViewModelAndLoad();
             }
         }
     }
@@ -142,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (allGranted) {
-                loadFiles();
+                initViewModelAndLoad();
             } else {
                 new AlertDialog.Builder(this)
                         .setTitle("Permission required")
@@ -152,5 +139,21 @@ public class MainActivity extends AppCompatActivity {
                         .show();
             }
         }
+    }
+
+    private void initViewModelAndLoad() {
+        viewModel = new ViewModelProvider(this).get(FileListViewModel.class);
+
+        // Observe updates
+        viewModel.getGroupedMediaItems().observe(this, grouped -> {
+            adapter.submitList(new ArrayList<>(grouped));
+        });
+
+        // Build indexers
+        final List<IMediaIndexer> indexers = new ArrayList<>();
+        indexers.add(new MediaStoreIndexer(this));
+
+        // Start indexing
+        viewModel.startIndexing(indexers);
     }
 }

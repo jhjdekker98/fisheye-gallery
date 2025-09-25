@@ -1,22 +1,28 @@
 package com.jhjdekker98.fisheyegallery.activity;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.TypedValue;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.R;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ConfigActivity extends AppCompatActivity {
 
-    private static final String FOLDER_DEFAULT = "/storage/emulated/0/DCIM";
+    private static final String SAF_SEPARATOR = ":";
     private static final int COLUMNS_MAX = 9;
-
-    private TextView txtFolderPath;
+    private final List<Uri> safFolders = new ArrayList<>();
+    private CheckBox checkMediaStore;
+    private LinearLayout folderListContainer;
+    private Button btnAddFolder;
     private EditText editDepth;
     private EditText editColumns;
     private RadioGroup themeRadioGroup;
@@ -27,30 +33,38 @@ public class ConfigActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_config);
 
-        txtFolderPath = findViewById(R.id.txtFolderPath);
+        checkMediaStore = findViewById(R.id.checkMediaStore);
+        folderListContainer = findViewById(R.id.folderListContainer);
+        btnAddFolder = findViewById(R.id.btnAddFolder);
+
+        // Media Store checkbox
+        final SharedPreferences prefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE);
+        checkMediaStore.setChecked(prefs.getBoolean(Constants.SHARED_PREFS_KEY_USE_MEDIASTORE, true));
+
+        // SAF folders
+        final String savedFolders = prefs.getString(Constants.SHARED_PREFS_KEY_SAF_FOLDERS, "");
+        if (!savedFolders.isEmpty()) {
+            for (String uriString : savedFolders.split(SAF_SEPARATOR)) {
+                final Uri folderUri = Uri.parse(uriString);
+                safFolders.add(folderUri);
+                addFolderTextView(folderUri);
+            }
+        }
+
+        btnAddFolder.setOnClickListener(v -> {
+            final Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            startActivityForResult(intent, Constants.STORAGE_AREA_REQUEST_ID);
+        });
+
+        // TODO: Sort underneath
+
         editDepth = findViewById(R.id.editDepth);
         editColumns = findViewById(R.id.editColumns);
         themeRadioGroup = findViewById(R.id.themeRadioGroup);
         btnSave = findViewById(R.id.btnSave);
 
-        // Load current configuration
-        SharedPreferences prefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE);
-        String folderUriString = prefs.getString(Constants.SHARED_PREFS_KEY_FOLDER, null);
-        if (folderUriString != null) {
-            Uri folderUri = Uri.parse(folderUriString);
-            txtFolderPath.setText(folderUri.getPath());
-        } else {
-            txtFolderPath.setText(FOLDER_DEFAULT);
-        }
         editDepth.setText(String.valueOf(prefs.getInt(Constants.SHARED_PREFS_KEY_DEPTH, 0)));
         editColumns.setText(String.valueOf(prefs.getInt(Constants.SHARED_PREFS_KEY_COLUMNS, 3)));
-
-        // Folder picker
-        Button btnPickFolder = findViewById(R.id.btnPickFolder);
-        btnPickFolder.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-            startActivityForResult(intent, Constants.STORAGE_AREA_REQUEST_ID);
-        });
 
         // Set initial radio button selection
         final int themeId = prefs.getInt(Constants.SHARED_PREFS_KEY_THEME, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
@@ -68,6 +82,7 @@ public class ConfigActivity extends AppCompatActivity {
 
         // Save configuration
         btnSave.setOnClickListener(v -> {
+            // Determine max depth
             int depth;
             try {
                 depth = Integer.parseInt(editDepth.getText().toString());
@@ -76,6 +91,7 @@ public class ConfigActivity extends AppCompatActivity {
                 return;
             }
 
+            // Determine layout images per row
             int columns;
             try {
                 columns = Integer.parseInt(editColumns.getText().toString());
@@ -101,13 +117,29 @@ public class ConfigActivity extends AppCompatActivity {
                 selectedTheme = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
             }
 
-            // Apply theme and save preferences
+            // Apply theme
             AppCompatDelegate.setDefaultNightMode(selectedTheme);
 
+            // Determine use mediastore or not
+            boolean useMediastore = checkMediaStore.isChecked();
+
+            // Determine SAF folders
+            final StringBuilder sb = new StringBuilder();
+            for (Uri uri : safFolders) {
+                if (sb.length() > 0) {
+                    sb.append(SAF_SEPARATOR);
+                }
+                sb.append(uri.toString());
+            }
+
+
+            // Save preferences
             SharedPreferences.Editor editor = prefs.edit();
             editor.putInt(Constants.SHARED_PREFS_KEY_DEPTH, depth);
             editor.putInt(Constants.SHARED_PREFS_KEY_COLUMNS, columns);
             editor.putInt(Constants.SHARED_PREFS_KEY_THEME, selectedTheme);
+            editor.putBoolean(Constants.SHARED_PREFS_KEY_USE_MEDIASTORE, useMediastore);
+            editor.putString(Constants.SHARED_PREFS_KEY_SAF_FOLDERS, sb.toString());
             editor.apply();
 
             Toast.makeText(this, "Configuration saved!", Toast.LENGTH_SHORT).show();
@@ -118,26 +150,31 @@ public class ConfigActivity extends AppCompatActivity {
         });
     }
 
+    @SuppressLint("WrongConstant")
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == Constants.STORAGE_AREA_REQUEST_ID && resultCode == RESULT_OK && data != null) {
-            Uri treeUri = data.getData();
+            final Uri folderUri = data.getData();
 
-            // Persist permission
-            getContentResolver().takePersistableUriPermission(
-                    treeUri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            );
+            if (folderUri != null) {
+                safFolders.add(folderUri);
+                addFolderTextView(folderUri);
 
-            // Save URI
-            SharedPreferences prefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE);
-            prefs.edit().putString(Constants.SHARED_PREFS_KEY_FOLDER, treeUri.toString()).apply();
-
-            // Update displayed folder
-            txtFolderPath.setText(treeUri.getPath());
+                // Persistent URI permission
+                final int takeFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                getContentResolver().takePersistableUriPermission(folderUri, takeFlags);
+            }
         }
+    }
+
+    private void addFolderTextView(Uri uri) {
+        final TextView tv = new TextView(this);
+        tv.setText(uri.getPath());
+        tv.setPadding(8, 8, 8, 8);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        folderListContainer.addView(tv);
     }
 }
 

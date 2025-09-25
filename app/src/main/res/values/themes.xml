@@ -5,7 +5,9 @@
         <item name="colorPrimary">@color/colorPrimaryLight</item>
         <item name="colorOnPrimary">@color/colorOnPrimaryLight</item>
         <item name="colorBackgroundFloating">@color/colorBackgroundFloatingLight</item>
+        <item name="colorOnBackground">@color/colorOnBackgroundLight</item>
         <item name="colorControlNormal">@color/colorOnPrimaryLight</item>
+        <item name="dividerColor">@color/dividerColorLight</item>
     </style>
 
     <style name="Theme.FisheyeGallery" parent="Base.Theme.FisheyeGallery"/>
