@@ -17,23 +17,19 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.documentfile.provider.DocumentFile;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.R;
 import com.jhjdekker98.fisheyegallery.adapter.ImageAdapter;
-import com.jhjdekker98.fisheyegallery.model.FileEntry;
-import com.jhjdekker98.fisheyegallery.util.FileUtil;
-import com.jhjdekker98.fisheyegallery.util.ThumbnailManager;
-import java.util.ArrayList;
-import java.util.List;
+import com.jhjdekker98.fisheyegallery.model.FileListViewModel;
 
 public class MainActivity extends AppCompatActivity {
     private ImageAdapter imageAdapter;
     private RecyclerView recyclerView;
-    private ThumbnailManager thumbnailManager;
+    private FileListViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,49 +42,43 @@ public class MainActivity extends AppCompatActivity {
         final int themeId = prefs.getInt(Constants.SHARED_PREFS_KEY_THEME, AppCompatDelegate.getDefaultNightMode());
         AppCompatDelegate.setDefaultNightMode(themeId);
 
-        // Set view to Main Activity layout on startup
+        // RecyclerView
         setContentView(R.layout.activity_main);
+        recyclerView = findViewById(R.id.recyclerView);
+        final int columns = prefs.getInt(Constants.SHARED_PREFS_KEY_COLUMNS, 3);
+        recyclerView.setLayoutManager(new GridLayoutManager(this, columns));
 
         // Toolbar
         final MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        // RecyclerView
-        int columns = prefs.getInt(Constants.SHARED_PREFS_KEY_COLUMNS, 3);
-        recyclerView = findViewById(R.id.recyclerView);
-        recyclerView.setLayoutManager(new GridLayoutManager(this, columns));
+        // ViewModel
+        imageAdapter = new ImageAdapter(this, file -> {
+            Toast.makeText(this, "Clicked: " + file.getName(), Toast.LENGTH_SHORT).show();
+        });
+        recyclerView.setAdapter(imageAdapter);
+        viewModel = new ViewModelProvider(this,
+                ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()))
+                .get(FileListViewModel.class);
+        viewModel.getMediaFiles().observe(this, documentFiles -> {
+            imageAdapter.setItems(documentFiles);
+        });
 
-        // Thumbnails
-        thumbnailManager = new ThumbnailManager(this, prefs.getInt(Constants.SHARED_PREFS_KEY_THUMB_TTL, 7));
-        thumbnailManager.cleanup();
-
-        // Load files into RecyclerView
         loadFiles();
     }
 
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.menu_config) {
-            final Intent intent = new Intent(this, ConfigActivity.class);
-            startActivityForResult(intent, Constants.CONFIG_REQUEST_ID);
-            return true;
+    private void loadFiles() {
+        if (viewModel == null) {
+            return;
         }
-        return super.onOptionsItemSelected(item);
-    }
+        final SharedPreferences prefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE);
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == Constants.CONFIG_REQUEST_ID && resultCode == RESULT_OK) {
-            loadFiles();
-        }
+        final String folderUriString = prefs.getString(Constants.SHARED_PREFS_KEY_FOLDER, null);
+        if (folderUriString != null) {
+            final Uri folderUri = Uri.parse(folderUriString);
+            final int maxDepth = prefs.getInt(Constants.SHARED_PREFS_KEY_DEPTH, 0);
+            viewModel.loadFromTreeUri(folderUri, maxDepth);
+        } // TODO: Else show error
     }
 
     private void checkPermissions() {
@@ -121,38 +111,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void loadFiles() {
-        final SharedPreferences prefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE);
 
-        final String folderUriString = prefs.getString(Constants.SHARED_PREFS_KEY_FOLDER, null);
-        int maxDepth = prefs.getInt(Constants.SHARED_PREFS_KEY_DEPTH, 0);
-        int columns = prefs.getInt(Constants.SHARED_PREFS_KEY_COLUMNS, 3);
-
-        if (folderUriString == null) {
-            Toast.makeText(this, "No folder selected. Please configure a folder.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        final Uri folderUri = Uri.parse(folderUriString);
-        final DocumentFile folder = DocumentFile.fromTreeUri(this, folderUri);
-
-        final List<FileEntry> imageEntries = new ArrayList<>();
-
-        if (folder != null && folder.exists() && folder.isDirectory()) {
-            // Walk folder tree and collect image/video files
-            imageEntries.addAll(FileUtil.walkDocumentTree(folder, 0, maxDepth));
-        } else {
-            Toast.makeText(this, "Folder does not exist or cannot be accessed.", Toast.LENGTH_SHORT).show();
-        }
-
-        // Set up RecyclerView adapter
-        imageAdapter = new ImageAdapter(this, imageEntries, thumbnailManager);
-        recyclerView.setAdapter(imageAdapter);
-
-        // Update layout manager if columns changed in config
-        recyclerView.setLayoutManager(new GridLayoutManager(this, columns));
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
     }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.menu_config) {
+            final Intent intent = new Intent(this, ConfigActivity.class);
+            startActivityForResult(intent, Constants.CONFIG_REQUEST_ID);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {

@@ -1,27 +1,34 @@
 package com.jhjdekker98.fisheyegallery.adapter;
 
 import android.content.Context;
-import android.graphics.Bitmap;
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.Toast;
+import androidx.documentfile.provider.DocumentFile;
 import androidx.recyclerview.widget.RecyclerView;
+import com.bumptech.glide.Glide;
 import com.jhjdekker98.fisheyegallery.R;
-import com.jhjdekker98.fisheyegallery.model.FileEntry;
-import com.jhjdekker98.fisheyegallery.util.ThumbnailManager;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> {
-    private List<FileEntry> entries;
-    private Context context;
-    private ThumbnailManager thumbnailManager;
+    private final Context context;
+    private final List<DocumentFile> items = new ArrayList<>();
+    private final OnClickListener onClick;
 
-    public ImageAdapter(Context context, List<FileEntry> entries, ThumbnailManager thumbnailManager) {
+    public ImageAdapter(Context context, OnClickListener onClick) {
         this.context = context;
-        this.entries = entries;
-        this.thumbnailManager = thumbnailManager;
+        this.onClick = onClick;
+    }
+
+    public void setItems(List<DocumentFile> newItems) {
+        items.clear();
+        if (newItems != null) {
+            items.addAll(newItems);
+        }
+        notifyDataSetChanged();
     }
 
     @Override
@@ -32,20 +39,30 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        final FileEntry entry = entries.get(position);
-        holder.imageButton.setImageResource(R.drawable.noimg);
-        final Bitmap thumb = thumbnailManager.getThumbnail(context.getApplicationContext(), entry.getFile().getUri());
-        if (thumb != null) {
-            holder.imageButton.setImageBitmap(thumb);
-        }
-        holder.imageButton.setOnClickListener(v -> {
-            Toast.makeText(context, "Clicked: " + entry.getFile().getName(), Toast.LENGTH_SHORT).show();
+        final DocumentFile file = items.get(position);
+        final Uri uri = file.getUri();
+
+        Glide.with(holder.imageButton.getContext())
+                .load(uri)
+                .placeholder(R.drawable.noimg)
+                .centerCrop()
+                .into(holder.imageButton);
+
+        holder.itemView.setOnClickListener(v -> {
+            if (onClick == null) {
+                return;
+            }
+            onClick.onItemClick(file);
         });
     }
 
     @Override
     public int getItemCount() {
-        return entries.size();
+        return items.size();
+    }
+
+    public interface OnClickListener {
+        void onItemClick(DocumentFile file);
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
