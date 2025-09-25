@@ -5,13 +5,17 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import androidx.documentfile.provider.DocumentFile;
 import com.jhjdekker98.fisheyegallery.Constants;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class FileSystemIndexer implements IMediaIndexer {
+    private static final int BATCH_SIZE = 50;
     private final Context context;
     private final Uri rootUri;
     private final SharedPreferences prefs;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private volatile boolean canceled = false;
 
     public FileSystemIndexer(Context context, Uri rootUri, SharedPreferences prefs) {
@@ -22,7 +26,7 @@ public class FileSystemIndexer implements IMediaIndexer {
 
     @Override
     public void startIndexing(Callback callback) {
-        Executors.newSingleThreadExecutor().execute(() -> {
+        executor.execute(() -> {
             final DocumentFile root = DocumentFile.fromTreeUri(context, rootUri);
             if (root == null || !root.exists()) {
                 callback.onComplete();
@@ -34,22 +38,41 @@ public class FileSystemIndexer implements IMediaIndexer {
     }
 
     private void walk(DocumentFile dir, int currentDepth, Callback callback) {
-        if (canceled) {
-            return;
-        }
+        if (canceled) return;
+
         final int maxDepth = getMaxDepth();
-        if (maxDepth > 0 && currentDepth > maxDepth) {
-            return;
-        }
+        if (maxDepth > 0 && currentDepth > maxDepth) return;
+
+        List<Uri> batch = new ArrayList<>();
+
         for (DocumentFile file : dir.listFiles()) {
-            if (canceled) {
-                return;
-            }
+            if (canceled) return;
+
             if (file.isDirectory()) {
                 walk(file, currentDepth + 1, callback);
             } else if (isMediaFile(file)) {
-                callback.onMediaFound(Collections.singletonList(file.getUri()));
+                batch.add(file.getUri());
+                if (batch.size() >= BATCH_SIZE) {
+                    sendBatch(batch, callback);
+                    batch.clear();
+                }
             }
+        }
+
+        if (!batch.isEmpty()) {
+            sendBatch(batch, callback);
+        }
+    }
+
+    private void sendBatch(List<Uri> batch, Callback callback) {
+        // Reuse the same executor: runs sequentially on the background thread
+        callback.onMediaFound(new ArrayList<>(batch));
+
+        // Optional: tiny pause for network shares
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

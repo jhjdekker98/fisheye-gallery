@@ -3,6 +3,7 @@ package com.jhjdekker98.fisheyegallery.ui;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,14 +16,43 @@ import com.bumptech.glide.Glide;
 import com.jhjdekker98.fisheyegallery.R;
 import com.jhjdekker98.fisheyegallery.activity.FullImageActivity;
 import com.jhjdekker98.fisheyegallery.model.GalleryItem;
+import com.jhjdekker98.fisheyegallery.util.CollectionUtil;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int VIEW_TYPE_HEADER = 0;
     private static final int VIEW_TYPE_IMAGE = 1;
+    private static final Set<String> ONLINE_SCHEMES = CollectionUtil.setOf(
+            "http",
+            "https",
+            "smb",
+            "cifs"); //TODO: Find reliable source and expand
 
     private final List<GalleryItem> items = new ArrayList<>();
+
+    private boolean isLocal(Uri uri) {
+        // Only used for local filesystem
+        if (uri.getScheme().equals("file")) {
+            return true;
+        }
+        // Used for web resources
+        if (ONLINE_SCHEMES.contains(uri.getScheme())) {
+            return false;
+        }
+        // MediaStore, SAF, or through an app/intent
+        if (uri.getScheme().equals("content")) {
+            final String authority = uri.getAuthority();
+            if (authority != null && authority.startsWith("media")) {
+                return true;
+            }
+            // Unknown provider - assume cloud
+            Log.d("FileListViewModel", "isLocal - unknown provider authority: `" + authority + "`");
+            return false;
+        }
+        return false;
+    }
 
     public void submitList(List<GalleryItem> newItems) {
         items.clear();
@@ -58,12 +88,14 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         } else if (holder instanceof ImageViewHolder) {
             final ImageViewHolder imageHolder = (ImageViewHolder) holder;
             final GalleryItem.Image imageItem = (GalleryItem.Image) item;
+            final boolean isLocal = isLocal(imageItem.uri);
 
-            imageHolder.bind(imageItem.uri);
+            imageHolder.bind(imageItem.uri, isLocal);
 
             imageHolder.imageView.setOnClickListener(v -> {
                 final Intent intent = new Intent(v.getContext(), FullImageActivity.class);
                 intent.putExtra(FullImageActivity.EXTRA_IMAGE_URI, imageItem.uri);
+                intent.putExtra(FullImageActivity.EXTRA_IMAGE_LOCAL, isLocal);
                 final ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(
                         (Activity) v.getContext(),
                         imageHolder.imageView,
@@ -93,17 +125,21 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
     static class ImageViewHolder extends RecyclerView.ViewHolder {
         private final ImageView imageView;
+        private final ImageView cloudIcon;
 
         ImageViewHolder(View itemView) {
             super(itemView);
             imageView = itemView.findViewById(R.id.imageButton);
+            cloudIcon = itemView.findViewById(R.id.cloudIcon);
         }
 
-        void bind(Uri uri) {
+        void bind(Uri uri, boolean isLocal) {
             Glide.with(imageView.getContext())
                     .load(uri)
                     .centerCrop()
                     .into(imageView);
+
+            cloudIcon.setVisibility(isLocal ? View.GONE : View.VISIBLE);
         }
     }
 }

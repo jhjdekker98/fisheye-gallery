@@ -15,6 +15,7 @@ import com.jhjdekker98.fisheyegallery.R;
 
 public class FullImageActivity extends AppCompatActivity {
     public static final String EXTRA_IMAGE_URI = "extra_image_uri";
+    public static final String EXTRA_IMAGE_LOCAL = "extra_image_local";
     private ImageView fullImageView;
 
     @Override
@@ -30,12 +31,31 @@ public class FullImageActivity extends AppCompatActivity {
         setContentView(R.layout.activity_full_image);
 
         fullImageView = findViewById(R.id.fullImageView);
+
+
         final ImageButton btnShare = findViewById(R.id.btnShare);
         final ImageButton btnEdit = findViewById(R.id.btnEdit);
+        final ImageButton btnDownload = findViewById(R.id.btnDownload);
 
-        final Uri imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI);
+        final Uri imageUri;
+        final boolean isLocal;
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+            imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI);
+            isLocal = getIntent().getBooleanExtra(EXTRA_IMAGE_LOCAL, true);
+        } else {
+            imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI, Uri.class);
+            isLocal = getIntent().getBooleanExtra(EXTRA_IMAGE_LOCAL, true);
+        }
+
         if (imageUri != null) {
             fullImageView.setImageURI(imageUri);
+        }
+
+        if (!isLocal) {
+            btnDownload.setVisibility(ImageView.VISIBLE);
+            btnDownload.setOnClickListener(v -> {
+                Toast.makeText(this, "Download not implemented yet", Toast.LENGTH_SHORT).show();
+            });
         }
 
         btnShare.setOnClickListener(v -> {

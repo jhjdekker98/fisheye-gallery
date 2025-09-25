@@ -44,5 +44,18 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:layout_marginStart="32dp"
                 app:tint="?attr/colorOnSurface"/>
+
+        <ImageButton
+                android:id="@+id/btnDownload"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:scaleType="centerCrop"
+                android:adjustViewBounds="true"
+                android:src="@drawable/md_download_24px"
+                android:contentDescription="Download"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_marginStart="32dp"
+                android:visibility="gone"
+                app:tint="?attr/colorOnSurface"/>
     </LinearLayout>
 </LinearLayout>
