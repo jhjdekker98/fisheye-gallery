@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 
 public class MediaStoreIndexer implements IMediaIndexer {
-    private static final int BATCH_SIZE = 50; // tweak for smooth UI
+    private static final int BATCH_SIZE = 50;
     private final Context context;
     private volatile boolean canceled = false;
 

@@ -160,12 +160,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initViewModelAndLoad() {
-        viewModel = new ViewModelProvider(this).get(FileListViewModel.class);
+        if (viewModel == null) {
+            viewModel = new ViewModelProvider(this).get(FileListViewModel.class);
 
-        // Observe updates
-        viewModel.getGroupedMediaItems().observe(this, grouped -> {
-            adapter.submitList(new ArrayList<>(grouped));
-        });
+            // Observe updates
+            viewModel.getGroupedMediaItems().observe(this, grouped -> {
+                adapter.submitList(new ArrayList<>(grouped));
+            });
+        }
 
         // Build indexers
         final List<IMediaIndexer> indexers = new ArrayList<>();
@@ -182,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Start indexing
-        viewModel.startIndexing(indexers);
+        viewModel.loadCacheThenIndex(indexers);
     }
 
     private static class SpanSizeLookup extends GridLayoutManager.SpanSizeLookup {
