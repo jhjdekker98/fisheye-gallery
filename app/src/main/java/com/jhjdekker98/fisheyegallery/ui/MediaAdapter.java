@@ -1,5 +1,7 @@
 package com.jhjdekker98.fisheyegallery.ui;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -7,9 +9,11 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityOptionsCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.jhjdekker98.fisheyegallery.R;
+import com.jhjdekker98.fisheyegallery.activity.FullImageActivity;
 import com.jhjdekker98.fisheyegallery.model.GalleryItem;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +56,20 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         if (holder instanceof HeaderViewHolder) {
             ((HeaderViewHolder) holder).bind(((GalleryItem.Header) item).dateLabel);
         } else if (holder instanceof ImageViewHolder) {
-            ((ImageViewHolder) holder).bind(((GalleryItem.Image) item).uri);
+            final ImageViewHolder imageHolder = (ImageViewHolder) holder;
+            final GalleryItem.Image imageItem = (GalleryItem.Image) item;
+
+            imageHolder.bind(imageItem.uri);
+
+            imageHolder.imageView.setOnClickListener(v -> {
+                final Intent intent = new Intent(v.getContext(), FullImageActivity.class);
+                intent.putExtra(FullImageActivity.EXTRA_IMAGE_URI, imageItem.uri);
+                final ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                        (Activity) v.getContext(),
+                        imageHolder.imageView,
+                        v.getContext().getString(R.string.image_transition));
+                v.getContext().startActivity(intent, options.toBundle());
+            });
         }
     }
 
