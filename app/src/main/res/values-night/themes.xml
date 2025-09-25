@@ -3,6 +3,7 @@
     <style name="Base.Theme.FisheyeGallery" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
         <item name="colorPrimary">@color/colorPrimaryDark</item>
+        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
         <item name="colorOnPrimary">@color/colorOnPrimaryDark</item>
         <item name="colorBackgroundFloating">@color/colorBackgroundFloatingDark</item>
         <item name="colorOnBackground">@color/colorOnBackgroundDark</item>

@@ -1,140 +1,145 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<androidx.coordinatorlayout.widget.CoordinatorLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fitsSystemWindows="true">
-
-    <!-- Wrapper for footer -->
-    <LinearLayout
-            android:orientation="vertical"
+    <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:fitsSystemWindows="true">
 
-        <!-- Content -->
+        <!-- Wrapper for footer -->
         <LinearLayout
                 android:orientation="vertical"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1">
+                android:layout_height="match_parent">
 
-            <!-- Toolbar as Header -->
-            <com.google.android.material.appbar.MaterialToolbar
-                    android:layout_width="match_parent"
-                    android:layout_height="?attr/actionBarSize"
-                    android:background="?attr/colorPrimary"
-                    app:title="Settings"
-                    app:titleTextColor="?attr/colorOnPrimary"
-                    app:iconTint="?attr/colorOnPrimary"/>
-
-            <!-- File scan header -->
-            <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="File scan"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:paddingTop="24dp"
-                    android:paddingBottom="8dp"/>
-
-            <!-- MediaStore Checkbox -->
-            <CheckBox
-                    android:id="@+id/checkMediaStore"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
-                    android:text="Display files from MediaStore?"/>
-
-            <!-- SAF Folders List -->
+            <!-- Content -->
             <LinearLayout
-                    android:id="@+id/folderListContainer"
                     android:orientation="vertical"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp">
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+
+                <!-- Toolbar as Header -->
+                <com.google.android.material.appbar.MaterialToolbar
+                        android:layout_width="match_parent"
+                        android:layout_height="?attr/actionBarSize"
+                        android:background="?attr/colorPrimary"
+                        app:title="Settings"
+                        app:titleTextColor="?attr/colorOnPrimary"
+                        app:iconTint="?attr/colorOnPrimary"/>
+
+                <!-- File scan header -->
+                <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="File scan"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="12dp"
+                        android:paddingTop="24dp"
+                        android:paddingBottom="8dp"/>
+
+                <!-- MediaStore Checkbox -->
+                <CheckBox
+                        android:id="@+id/checkMediaStore"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:text="Display files from MediaStore?"/>
+
+                <!-- SAF Folders List -->
+                <LinearLayout
+                        android:id="@+id/folderListContainer"
+                        android:orientation="vertical"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
+                </LinearLayout>
+
+                <Button
+                        android:id="@+id/btnAddFolder"
+                        android:text="Add Folder"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"/>
+
+                <!-- Scan depth -->
+                <com.jhjdekker98.fisheyegallery.ui.IconSettingView
+                        android:id="@+id/editDepth"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:icon="@drawable/md_folder_copy_24px"
+                        app:titleText="Scan depth"/>
+
+                <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/dividerColor"/>
+
+                <!-- Look and Feel header -->
+                <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Look and Feel"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="12dp"
+                        android:paddingTop="24dp"
+                        android:paddingBottom="8dp"/>
+
+                <!-- Images per row -->
+                <com.jhjdekker98.fisheyegallery.ui.IconSettingView
+                        android:id="@+id/columnsSetting"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:icon="@drawable/md_view_column_24px"
+                        app:titleText="Images per row"/>
+
+                <!-- Theme select -->
+                <com.jhjdekker98.fisheyegallery.ui.IconSettingView
+                        android:id="@+id/themeSelect"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        app:icon="@drawable/md_brightness_medium_24px"
+                        app:titleText="Theme"/>
+
+                <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/dividerColor"/>
+
+                <!-- Save button -->
+                <Button
+                        android:id="@+id/btnSave"
+                        android:text="Save Configuration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginTop="24dp"/>
             </LinearLayout>
 
-            <Button
-                    android:id="@+id/btnAddFolder"
-                    android:text="Add Folder"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"/>
-
-            <!-- Scan depth -->
-            <com.jhjdekker98.fisheyegallery.ui.IconSettingView
-                    android:id="@+id/editDepth"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:icon="@drawable/md_folder_copy_24px"
-                    app:titleText="Scan depth"/>
-
-            <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="?attr/dividerColor"/>
-
-            <!-- Look and Feel header -->
+            <!-- Footer text -->
             <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Look and Feel"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:paddingTop="24dp"
-                    android:paddingBottom="8dp"/>
-
-            <!-- Images per row -->
-            <com.jhjdekker98.fisheyegallery.ui.IconSettingView
-                    android:id="@+id/columnsSetting"
+                    android:id="@+id/footerText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:icon="@drawable/md_view_column_24px"
-                    app:titleText="Images per row"/>
-
-            <!-- Theme select -->
-            <com.jhjdekker98.fisheyegallery.ui.IconSettingView
-                    android:id="@+id/themeSelect"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    app:icon="@drawable/md_brightness_medium_24px"
-                    app:titleText="Theme"/>
-
-            <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="?attr/dividerColor"/>
-
-            <!-- Save button -->
-            <Button
-                    android:id="@+id/btnSave"
-                    android:text="Save Configuration"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
-                    android:layout_marginTop="24dp"/>
+                    android:text="@string/app_footer"
+                    android:gravity="center"
+                    android:padding="16dp"
+                    android:textColor="?attr/colorSurfaceDim"/>
         </LinearLayout>
-
-        <!-- Footer text -->
-        <TextView
-                android:id="@+id/footerText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/app_footer"
-                android:gravity="center"
-                android:padding="16dp"
-                android:textColor="?attr/colorSurfaceDim"/>
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

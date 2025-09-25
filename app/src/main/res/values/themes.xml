@@ -3,6 +3,7 @@
     <style name="Base.Theme.FisheyeGallery" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <item name="colorPrimary">@color/colorPrimaryLight</item>
+        <item name="android:statusBarColor">@color/colorPrimaryLight</item>
         <item name="colorOnPrimary">@color/colorOnPrimaryLight</item>
         <item name="colorBackgroundFloating">@color/colorBackgroundFloatingLight</item>
         <item name="colorOnBackground">@color/colorOnBackgroundLight</item>
