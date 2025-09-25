@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
@@ -22,6 +23,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.R;
 import com.jhjdekker98.fisheyegallery.model.FileListViewModel;
+import com.jhjdekker98.fisheyegallery.model.mediaindexer.FileSystemIndexer;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.IMediaIndexer;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.MediaStoreIndexer;
 import com.jhjdekker98.fisheyegallery.ui.MediaAdapter;
@@ -56,16 +58,16 @@ public class MainActivity extends AppCompatActivity {
         adapter = new MediaAdapter();
         final int columns = prefs.getInt(Constants.SHARED_PREFS_KEY_COLUMNS, 3);
         final GridLayoutManager layoutManager = new GridLayoutManager(this, columns);
-        layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
-            @Override
-            public int getSpanSize(int i) {
-                return adapter.getItemViewType(i) == 0 ? columns : 1;
-            }
-        });
+        layoutManager.setSpanSizeLookup(new SpanSizeLookup(adapter, columns));
 
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
-        initViewModelAndLoad();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        checkPermissions();
     }
 
     private void checkPermissions() {
@@ -116,6 +118,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == Constants.CONFIG_REQUEST_ID && resultCode == RESULT_OK) {
+            final SharedPreferences prefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE);
+            final int columns = prefs.getInt(Constants.SHARED_PREFS_KEY_COLUMNS, 3);
+            final GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
+            layoutManager.setSpanCount(columns);
+            layoutManager.setSpanSizeLookup(new SpanSizeLookup(adapter, columns));
+            adapter.notifyItemRangeChanged(0, adapter.getItemCount());
+
+            // TODO: Only update viewModel if scan folders changed
+            initViewModelAndLoad();
+        }
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
@@ -151,9 +169,34 @@ public class MainActivity extends AppCompatActivity {
 
         // Build indexers
         final List<IMediaIndexer> indexers = new ArrayList<>();
-        indexers.add(new MediaStoreIndexer(this));
+        final SharedPreferences prefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE);
+        if (prefs.getBoolean(Constants.SHARED_PREFS_KEY_USE_MEDIASTORE, true)) {
+            indexers.add(new MediaStoreIndexer(this));
+        }
+        final String safFolders = prefs.getString(Constants.SHARED_PREFS_KEY_SAF_FOLDERS, "");
+        if (!safFolders.isEmpty()) {
+            for (String uriString : safFolders.split(Constants.SAF_SEPARATOR)) {
+                final Uri folderUri = Uri.parse(uriString);
+                indexers.add(new FileSystemIndexer(this, folderUri, prefs));
+            }
+        }
 
         // Start indexing
         viewModel.startIndexing(indexers);
+    }
+
+    private static class SpanSizeLookup extends GridLayoutManager.SpanSizeLookup {
+        private final MediaAdapter adapter;
+        private final int columns;
+
+        SpanSizeLookup(MediaAdapter adapter, int columns) {
+            this.adapter = adapter;
+            this.columns = columns;
+        }
+
+        @Override
+        public int getSpanSize(int i) {
+            return adapter.getItemViewType(i) == 0 ? columns : 1;
+        }
     }
 }

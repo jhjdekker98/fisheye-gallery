@@ -12,8 +12,11 @@
     <color name="colorOnBackgroundLight">#FF000000</color>
     <color name="colorOnBackgroundDark">#FFFFFFFF</color>
 
-    <color name="dividerColorLight">#FFA0C0F4</color>
-    <color name="dividerColorDark">#FF498EF5</color>
+    <color name="dividerColorLight">#FFDDDDDD</color>
+    <color name="dividerColorDark">#FF202020</color>
+
+    <color name="colorSurfaceDimLight">#FFBBBBBB</color>
+    <color name="colorSurfaceDimDark">#FF303030</color>
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>

@@ -8,5 +8,6 @@
         <item name="colorOnBackground">@color/colorOnBackgroundDark</item>
         <item name="colorControlNormal">@color/colorOnPrimaryDark</item>
         <item name="dividerColor">@color/dividerColorDark</item>
+        <item name="colorSurfaceDim">@color/colorSurfaceDimDark</item>
     </style>
 </resources>

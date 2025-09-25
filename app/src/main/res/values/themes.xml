@@ -8,6 +8,7 @@
         <item name="colorOnBackground">@color/colorOnBackgroundLight</item>
         <item name="colorControlNormal">@color/colorOnPrimaryLight</item>
         <item name="dividerColor">@color/dividerColorLight</item>
+        <item name="colorSurfaceDim">@color/colorSurfaceDimLight</item>
     </style>
 
     <style name="Theme.FisheyeGallery" parent="Base.Theme.FisheyeGallery"/>
