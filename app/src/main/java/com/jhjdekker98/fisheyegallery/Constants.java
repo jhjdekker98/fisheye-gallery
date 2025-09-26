@@ -20,6 +20,9 @@ public class Constants {
     public static final String SHARED_PREFS_KEY_THEME = "theme";
     public static final String SAF_SEPARATOR = ";";
 
+    public static final String SECURE_SHARED_PREFS_KEY_SMB_CONNS = "smb_conns";
+
+
     public static final Map<Integer, String> THEME_LOOKUP = CollectionUtil.mapOf(
             CollectionUtil.mapEntry(AppCompatDelegate.MODE_NIGHT_NO, "Light"),
             CollectionUtil.mapEntry(AppCompatDelegate.MODE_NIGHT_YES, "Dark"),

@@ -54,8 +54,6 @@ public class FileListViewModel extends AndroidViewModel {
      * Load cached URIs in batches, post to UI, then start indexers.
      */
     public void loadCacheThenIndex(List<IMediaIndexer> indexers) {
-        Log.d("FileListViewModel", "loadCacheThenIndex");
-
         stopIndexing(); // cancel any running indexers
         if (executor != null) {
             executor.shutdownNow(); // cancel any previously running tasks
@@ -76,7 +74,6 @@ public class FileListViewModel extends AndroidViewModel {
                         boolean fileExists = checkUriExists(Uri.parse(mci.uri));
                         (fileExists ? validItems : staleItems).add(mci);
                     });
-                    Log.d("FileListViewModel", "Posting " + validItems.size() + " items to view");
                     processNewCacheItems(validItems, true);
                     batch.clear();
                     batch.addAll(validItems);

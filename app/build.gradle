@@ -35,10 +35,13 @@ dependencies {
     implementation "androidx.room:room-runtime:2.8.1"
     annotationProcessor "androidx.room:room-compiler:2.8.1"
 
+    implementation 'com.hierynomus:smbj:0.13.0'
+
+    implementation 'com.google.code.gson:gson:2.13.2'
+
     implementation 'androidx.lifecycle:lifecycle-viewmodel:2.9.4'
     implementation 'androidx.lifecycle:lifecycle-livedata:2.9.4'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
-
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'

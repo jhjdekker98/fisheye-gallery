@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.text.InputType;
 import android.util.TypedValue;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -26,22 +25,18 @@ import java.util.List;
 
 public class SafSettingsController implements ISettingsController {
     private final Context context;
-    private final CheckBox checkMediaStore;
     private final LinearLayout folderListContainer;
     private final Button btnAddFolder;
     private final IconSettingView depthSetting;
 
     private final List<Uri> safFolders = new ArrayList<>();
-    private boolean useMediaStore;
     private int depth;
 
     public SafSettingsController(Context context,
-                                 CheckBox checkMediaStore,
                                  LinearLayout folderListContainer,
                                  Button btnAddFolder,
                                  IconSettingView depthSetting) {
         this.context = context;
-        this.checkMediaStore = checkMediaStore;
         this.folderListContainer = folderListContainer;
         this.btnAddFolder = btnAddFolder;
         this.depthSetting = depthSetting;
@@ -49,8 +44,6 @@ public class SafSettingsController implements ISettingsController {
 
     @Override
     public void init() {
-        checkMediaStore.setOnCheckedChangeListener((btn, checked) -> useMediaStore = checked);
-
         btnAddFolder.setOnClickListener(v -> {
             final Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
             ((Activity) context).startActivityForResult(intent, Constants.STORAGE_AREA_REQUEST_ID);
@@ -61,10 +54,6 @@ public class SafSettingsController implements ISettingsController {
 
     @Override
     public void loadFromPrefs(SharedPreferences prefs) {
-        // MediaStore
-        useMediaStore = prefs.getBoolean(Constants.SHARED_PREFS_KEY_USE_MEDIASTORE, true);
-        checkMediaStore.setChecked(useMediaStore);
-
         // SAF folders
         final String savedFolders = prefs.getString(Constants.SHARED_PREFS_KEY_SAF_FOLDERS, "");
         safFolders.clear();
@@ -85,9 +74,6 @@ public class SafSettingsController implements ISettingsController {
 
     @Override
     public void saveToPrefs(SharedPreferences.Editor editor) {
-        // MediaStore
-        editor.putBoolean(Constants.SHARED_PREFS_KEY_USE_MEDIASTORE, useMediaStore);
-
         // SAF folders
         final StringBuilder sb = new StringBuilder();
         for (Uri uri : safFolders) {

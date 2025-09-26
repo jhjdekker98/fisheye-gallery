@@ -45,13 +45,12 @@
                         android:paddingBottom="8dp"/>
 
                 <!-- MediaStore Checkbox -->
-                <CheckBox
+                <com.jhjdekker98.fisheyegallery.ui.IconSettingView
                         android:id="@+id/checkMediaStore"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
-                        android:text="Display files from MediaStore?"/>
+                        app:icon="@drawable/md_filter_24px"
+                        app:titleText="MediaStore"/>
 
                 <!-- SAF Folders List -->
                 <LinearLayout

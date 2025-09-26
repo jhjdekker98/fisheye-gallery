@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
@@ -20,15 +19,21 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.R;
+import com.jhjdekker98.fisheyegallery.config.smb.SmbCredentials;
 import com.jhjdekker98.fisheyegallery.model.FileListViewModel;
-import com.jhjdekker98.fisheyegallery.model.mediaindexer.FileSystemIndexer;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.IMediaIndexer;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.MediaStoreIndexer;
+import com.jhjdekker98.fisheyegallery.model.mediaindexer.SmbIndexer;
+import com.jhjdekker98.fisheyegallery.security.SecureStorageHelper;
 import com.jhjdekker98.fisheyegallery.ui.MediaAdapter;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private MediaAdapter adapter;
@@ -172,14 +177,32 @@ public class MainActivity extends AppCompatActivity {
         // Build indexers
         final List<IMediaIndexer> indexers = new ArrayList<>();
         final SharedPreferences prefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE);
+
+        // -- Add MediaStore indexer
         if (prefs.getBoolean(Constants.SHARED_PREFS_KEY_USE_MEDIASTORE, true)) {
             indexers.add(new MediaStoreIndexer(this));
         }
-        final String safFolders = prefs.getString(Constants.SHARED_PREFS_KEY_SAF_FOLDERS, "");
-        if (!safFolders.isEmpty()) {
-            for (String uriString : safFolders.split(Constants.SAF_SEPARATOR)) {
-                final Uri folderUri = Uri.parse(uriString);
-                indexers.add(new FileSystemIndexer(this, folderUri, prefs));
+
+        // -- Add SMB indexers
+        // TODO: See if we can refactor this somewhat and use SmbCredentials.getSmbCredentials
+        final SecureStorageHelper ssh = SecureStorageHelper.getInstance(getApplicationContext());
+        final String json = ssh.retrieveDecrypted(Constants.SECURE_SHARED_PREFS_KEY_SMB_CONNS);
+        if (json != null && !json.isEmpty()) {
+            final Type type = new TypeToken<Map<String, SmbCredentials>>() {
+            }.getType();
+            Map<String, SmbCredentials> credsMap = new Gson().fromJson(json, type);
+
+            final int smbDepth = prefs.getInt(Constants.SHARED_PREFS_KEY_DEPTH, 0);
+
+            for (SmbCredentials creds : credsMap.values()) {
+                indexers.add(new SmbIndexer(
+                        creds.host,
+                        creds.share,
+                        creds.username,
+                        creds.password,
+                        creds.rootPath,
+                        smbDepth
+                ));
             }
         }
 

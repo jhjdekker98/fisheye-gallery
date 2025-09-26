@@ -2,6 +2,9 @@ package com.jhjdekker98.fisheyegallery.ui;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -96,6 +99,13 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 final Intent intent = new Intent(v.getContext(), FullImageActivity.class);
                 intent.putExtra(FullImageActivity.EXTRA_IMAGE_URI, imageItem.uri);
                 intent.putExtra(FullImageActivity.EXTRA_IMAGE_LOCAL, isLocal);
+
+                final Drawable thumbDrawable = imageHolder.imageView.getDrawable();
+                if (thumbDrawable instanceof BitmapDrawable) {
+                    final Bitmap bitmap = ((BitmapDrawable) thumbDrawable).getBitmap();
+                    intent.putExtra(FullImageActivity.EXTRA_THUMBNAIL, bitmap);
+                }
+
                 final ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(
                         (Activity) v.getContext(),
                         imageHolder.imageView,
@@ -143,5 +153,3 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         }
     }
 }
-
-
