@@ -48,7 +48,7 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 return true;
             }
             // Unknown provider - assume cloud
-            Log.d("FileListViewModel", "isLocal - unknown provider authority: `" + authority + "`");
+            Log.d("MediaAdapter", "isLocal - unknown provider authority: `" + authority + "`");
             return false;
         }
         return false;

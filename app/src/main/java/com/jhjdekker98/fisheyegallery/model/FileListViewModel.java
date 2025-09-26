@@ -14,41 +14,36 @@ import androidx.documentfile.provider.DocumentFile;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.jhjdekker98.fisheyegallery.model.mediacache.MediaCacheItem;
+import com.jhjdekker98.fisheyegallery.model.mediacache.MediaCacheRepository;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.IMediaIndexer;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class FileListViewModel extends AndroidViewModel {
-    private static final String TAG = "FileListViewModel";
+    private static final int CACHE_BATCH_SIZE = 100;
+
     private final MutableLiveData<List<GalleryItem>> groupedMediaLive = new MutableLiveData<>(new ArrayList<>());
     private final LinkedHashMap<String, Uri> uriMap = new LinkedHashMap<>();
     private final LinkedHashMap<String, List<GalleryItem.Image>> groupedMap = new LinkedHashMap<>();
     private final List<IMediaIndexer> activeIndexers = new ArrayList<>();
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final File cacheFile;
 
+    private final MediaCacheRepository cacheRepo;
+    private ExecutorService executor;
 
     public FileListViewModel(@NonNull Application application) {
         super(application);
-        cacheFile = new File(application.getFilesDir(), "media_cache.json");
+        Log.d("FileListViewModel", "recreating cacherepo");
+        this.cacheRepo = new MediaCacheRepository(application);
     }
 
     public LiveData<List<GalleryItem>> getGroupedMediaItems() {
@@ -56,99 +51,114 @@ public class FileListViewModel extends AndroidViewModel {
     }
 
     /**
-     * Load cached URIs first, post to UI, then start indexers.
+     * Load cached URIs in batches, post to UI, then start indexers.
      */
     public void loadCacheThenIndex(List<IMediaIndexer> indexers) {
-        synchronized (uriMap) {
-            uriMap.clear();
-            groupedMap.clear();
+        Log.d("FileListViewModel", "loadCacheThenIndex");
+
+        stopIndexing(); // cancel any running indexers
+        if (executor != null) {
+            executor.shutdownNow(); // cancel any previously running tasks
         }
-        groupedMediaLive.postValue(new ArrayList<>());
+        executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
-            // Setup params
-            final Map<String, String> cacheMap = loadCache();
-            final List<Uri> urisToProcess = new ArrayList<>();
+            int skip = 0;
+            final List<MediaCacheItem> batch = new ArrayList<>();
 
-            // Rebuild uriMap from cache
-            final Iterator<Map.Entry<String, String>> it = cacheMap.entrySet().iterator();
-            while (it.hasNext()) {
-                final Map.Entry<String, String> entry = it.next();
-                final Uri uri = Uri.parse(entry.getValue());
-                if (checkUriExists(uri)) {
-                    urisToProcess.add(uri);
-                } else {
-                    it.remove(); // stale
+            do {
+                final CountDownLatch latch = new CountDownLatch(1);
+
+                cacheRepo.queryCache(skip, CACHE_BATCH_SIZE, items -> {
+                    final List<MediaCacheItem> validItems = new ArrayList<>();
+                    final List<MediaCacheItem> staleItems = new ArrayList<>();
+                    items.forEach(mci -> {
+                        boolean fileExists = checkUriExists(Uri.parse(mci.uri));
+                        (fileExists ? validItems : staleItems).add(mci);
+                    });
+                    Log.d("FileListViewModel", "Posting " + validItems.size() + " items to view");
+                    processNewCacheItems(validItems, true);
+                    batch.clear();
+                    batch.addAll(validItems);
+                    if (!staleItems.isEmpty()) {
+                        cacheRepo.deleteFromCache(staleItems);
+                    }
+                    latch.countDown();
+                });
+
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
                 }
-            }
 
-            // Post-process cached URIs
-            processNewUris(urisToProcess, true);
+                skip += CACHE_BATCH_SIZE;
+            } while (!batch.isEmpty());
 
-            // Save cleaned cache
-            saveCache(cacheMap);
-
-            // Start indexing after cache
             startIndexing(indexers);
         });
     }
 
     /**
-     * Central method to post-process a batch of new URIs:
-     * - Adds to groupedMap
-     * - Adds headers if needed
-     * - Updates groupedMediaLive
-     * - Updates cache
+     * Process cache items or newly indexed items into UI and uriMap.
+     */
+    private void processNewCacheItems(List<MediaCacheItem> items, boolean forcePost) {
+        if (items == null || items.isEmpty()) return;
+
+        boolean anyAdded = forcePost;
+        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        final List<GalleryItem> batchForUI = new ArrayList<>();
+
+        synchronized (uriMap) {
+            for (MediaCacheItem item : items) {
+                Uri u = Uri.parse(item.uri);
+                if (!uriMap.containsKey(item.key)) {
+                    uriMap.put(item.key, u);
+                    anyAdded = true;
+
+                    String dayKey = sdf.format(new Date(item.lastModified));
+                    List<GalleryItem.Image> dayList = groupedMap.computeIfAbsent(dayKey, k -> new ArrayList<>());
+                    GalleryItem.Image imageItem = new GalleryItem.Image(u);
+                    dayList.add(imageItem);
+
+                    if (dayList.size() == 1) batchForUI.add(new GalleryItem.Header(dayKey));
+                    batchForUI.add(imageItem);
+                }
+            }
+        }
+
+        if (anyAdded) {
+            mainHandler.post(() -> {
+                List<GalleryItem> current = groupedMediaLive.getValue();
+                if (current == null) current = new ArrayList<>();
+                current.addAll(batchForUI);
+                groupedMediaLive.setValue(current);
+            });
+        }
+    }
+
+    /**
+     * Called by indexers when new media is found.
      */
     private void processNewUris(List<Uri> newUris, boolean forcePost) {
         if (newUris == null || newUris.isEmpty()) return;
 
-        executor.execute(() -> {
-            boolean anyAdded = forcePost;
-            final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-            final List<GalleryItem> batchForUI = new ArrayList<>();
+        final List<MediaCacheItem> cacheItems = new ArrayList<>();
 
-            synchronized (uriMap) {
+        for (Uri uri : newUris) {
+            String key = normalizeKey(uri);
+            cacheItems.add(new MediaCacheItem(
+                    key,
+                    uri.toString(),
+                    null, // TODO: Implement album name
+                    getFileDate(uri)));
+        }
 
-                if (forcePost) {
-                    Log.d("FileListViewModel", "size: " + uriMap.size());
-                }
+        processNewCacheItems(cacheItems, forcePost);
 
-                for (Uri u : newUris) {
-                    if (u == null) continue;
-                    String key = normalizeKey(u);
-                    if (!uriMap.containsKey(key)) {
-                        uriMap.put(key, u);
-                        anyAdded = true;
-
-                        long fileDate = getFileDate(u);
-                        String dayKey = sdf.format(new Date(fileDate));
-                        List<GalleryItem.Image> dayList = groupedMap.computeIfAbsent(dayKey, k -> new ArrayList<>());
-                        GalleryItem.Image imageItem = new GalleryItem.Image(u);
-                        dayList.add(imageItem);
-
-                        if (dayList.size() == 1) batchForUI.add(new GalleryItem.Header(dayKey));
-                        batchForUI.add(imageItem);
-                    }
-                }
-            }
-
-            if (anyAdded) {
-                mainHandler.post(() -> {
-                    List<GalleryItem> current = groupedMediaLive.getValue();
-                    if (current == null) current = new ArrayList<>();
-                    current.addAll(batchForUI);
-                    groupedMediaLive.setValue(current);
-
-                    // Update cache
-                    LinkedHashMap<String, String> cacheMap = new LinkedHashMap<>();
-                    for (Map.Entry<String, Uri> entry : uriMap.entrySet()) {
-                        cacheMap.put(entry.getKey(), entry.getValue().toString());
-                    }
-                    saveCache(cacheMap);
-                });
-            }
-        });
+        // Persist new items to Room
+        cacheRepo.updateCache(cacheItems);
     }
 
     private boolean checkUriExists(Uri uri) {
@@ -164,40 +174,9 @@ public class FileListViewModel extends AndroidViewModel {
         }
     }
 
-    // --- Cache load/save ---
-    private Map<String, String> loadCache() {
-        if (!cacheFile.exists()) return new LinkedHashMap<>();
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(cacheFile), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-            Type type = new TypeToken<LinkedHashMap<String, String>>() {
-            }.getType();
-            return new Gson().fromJson(sb.toString(), type);
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to load cache", e);
-            return new LinkedHashMap<>();
-        }
-    }
-
-    private void saveCache(Map<String, String> cacheMap) {
-        try (FileOutputStream fos = new FileOutputStream(cacheFile)) {
-            String json = new Gson().toJson(cacheMap);
-            fos.write(json.getBytes(StandardCharsets.UTF_8));
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to save cache", e);
-        }
-    }
-
-    // --- Existing indexing logic ---
+    // --- Indexing logic ---
     private synchronized void startIndexing(List<IMediaIndexer> indexers) {
-        Log.d(TAG, "startIndexing(): requested " + (indexers == null ? 0 : indexers.size()) + " indexers");
-
-        // Stop running indexers
         stopIndexing();
-
         if (indexers == null || indexers.isEmpty()) return;
         activeIndexers.addAll(indexers);
 
@@ -213,21 +192,16 @@ public class FileListViewModel extends AndroidViewModel {
                     synchronized (FileListViewModel.this) {
                         activeIndexers.remove(idx);
                     }
-                    Log.d(TAG, "Indexer complete: " + idx);
                 }
             });
         }
     }
 
     public synchronized void stopIndexing() {
-        if (!activeIndexers.isEmpty()) {
-            Log.d(TAG, "stopIndexing(): cancelling " + activeIndexers.size() + " indexers");
-        }
         for (IMediaIndexer idx : activeIndexers) {
             try {
                 idx.stop();
-            } catch (Exception e) {
-                Log.w(TAG, "stopIndexing: exception stopping indexer", e);
+            } catch (Exception ignored) {
             }
         }
         activeIndexers.clear();
@@ -240,9 +214,7 @@ public class FileListViewModel extends AndroidViewModel {
         executor.shutdownNow();
     }
 
-    /**
-     * Simple normalization to deduplicate results of multiple indexers
-     */
+    // --- Utility methods ---
     private String normalizeKey(Uri uri) {
         if (uri == null) return "";
 
@@ -279,8 +251,7 @@ public class FileListViewModel extends AndroidViewModel {
     private long getFileDate(Uri uri) {
         final ContentResolver resolver = getApplication().getContentResolver();
 
-        // Try to get MediaStore metadata time first
-        if (uri.getAuthority().equals("media")) {
+        if ("media".equals(uri.getAuthority())) {
             try (Cursor cursor = resolver.query(
                     uri,
                     new String[]{MediaStore.MediaColumns.DATE_TAKEN, MediaStore.MediaColumns.DATE_MODIFIED},
@@ -288,18 +259,14 @@ public class FileListViewModel extends AndroidViewModel {
                 if (cursor != null && cursor.moveToFirst()) {
                     long dateTaken = cursor.getLong(0);
                     long dateModified = cursor.getLong(1);
-                    return dateTaken > 0 ? dateTaken : dateModified * 1000; // DATE_MODIFIED is in seconds
+                    return dateTaken > 0 ? dateTaken : dateModified * 1000;
                 }
             }
         }
 
-        // Try to get SAF metadata lastModified time
-        final DocumentFile file = DocumentFile.fromSingleUri(getApplication(), uri);
-        if (file != null && file.exists()) {
-            return file.lastModified();
-        }
+        DocumentFile file = DocumentFile.fromSingleUri(getApplication(), uri);
+        if (file != null && file.exists()) return file.lastModified();
 
-        // Fallback to current time
         return System.currentTimeMillis();
     }
 }
