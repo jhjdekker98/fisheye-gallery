@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ic_fisheye_foreground.svg
+     Foreground SVG for "Fisheye Gallery" app icon
+     Colors: black (#000000), white (#FFFFFF), accent (#498EF5)
+     ViewBox 512x512 so it's easy to scale to common Android mipmap sizes.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Fisheye Gallery icon">
+    <title>Fisheye Gallery</title>
+    <desc>Stylized fisheye lens camera icon — foreground layer (transparent background)</desc>
+
+    <!-- Outer ring (thin black stroke) -->
+    <g fill="none" stroke="#000000" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="256" cy="256" r="196"/>
+    </g>
+
+    <!-- Accent inner ring -->
+    <circle cx="256" cy="256" r="150" fill="#498EF5"/>
+
+    <!-- Darker inner pupil -->
+    <circle cx="256" cy="256" r="86" fill="#000000" opacity="0.95"/>
+
+    <!-- Small accent ring inside pupil -->
+    <circle cx="256" cy="256" r="46" fill="#498EF5" opacity="0.5"/>
+
+    <!-- Tiny white pin-point reflection -->
+    <circle cx="240" cy="236" r="8" fill="#FFFFFF"/>
+
+    <!-- White iris / highlight shapes to suggest lens curvature -->
+    <g fill="#FFFFFF">
+        <!-- bright crescent highlight -->
+        <path d="M360 160
+             C340 140, 300 116, 256 116
+             C212 116, 172 140, 152 160
+             C200 180, 312 180, 360 160 Z"
+              opacity="0.35"/>
+    </g>
+</svg>
