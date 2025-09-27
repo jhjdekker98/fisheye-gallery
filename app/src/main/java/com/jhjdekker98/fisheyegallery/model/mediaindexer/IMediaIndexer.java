@@ -8,6 +8,8 @@ public interface IMediaIndexer {
 
     void stop();
 
+    IndexerType getIndexerType();
+
     interface Callback {
         void onMediaFound(List<Uri> newUris);
 

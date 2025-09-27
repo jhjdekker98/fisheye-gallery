@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SmbCredentials {
+    private static final String EMPTY_MAP_JSON = "{}";
     public final String host;
     public final String share;
     public final String username;
@@ -37,5 +38,9 @@ public class SmbCredentials {
         credentialsMap.put(creds.host + "/" + creds.share, creds);
         String serialized = new Gson().toJson(credentialsMap);
         ssh.storeEncrypted(Constants.SECURE_SHARED_PREFS_KEY_SMB_CONNS, serialized);
+    }
+
+    public static void clearSmbCredentials(SecureStorageHelper ssh) {
+        ssh.storeEncrypted(Constants.SECURE_SHARED_PREFS_KEY_SMB_CONNS, EMPTY_MAP_JSON);
     }
 }

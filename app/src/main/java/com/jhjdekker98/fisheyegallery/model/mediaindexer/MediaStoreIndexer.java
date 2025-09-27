@@ -67,4 +67,9 @@ public class MediaStoreIndexer implements IMediaIndexer {
     public void stop() {
         canceled = true;
     }
+
+    @Override
+    public IndexerType getIndexerType() {
+        return IndexerType.MEDIASTORE;
+    }
 }

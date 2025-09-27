@@ -89,4 +89,9 @@ public class FileSystemIndexer implements IMediaIndexer {
     public void stop() {
         canceled = true;
     }
+
+    @Override
+    public IndexerType getIndexerType() {
+        return IndexerType.SAF;
+    }
 }

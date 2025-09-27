@@ -50,6 +50,9 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             if (authority != null && authority.startsWith("media")) {
                 return true;
             }
+            if ("com.jhjdekker98.fisheyegallery.smb".equals(authority)) {
+                return false; //Custom SMB Content Provider
+            }
             // Unknown provider - assume cloud
             Log.d("MediaAdapter", "isLocal - unknown provider authority: `" + authority + "`");
             return false;

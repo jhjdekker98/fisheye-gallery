@@ -117,5 +117,10 @@ public class SmbIndexer implements IMediaIndexer {
     private boolean isDirectory(FileIdBothDirectoryInformation f) {
         return (f.getFileAttributes() & FileAttributes.FILE_ATTRIBUTE_DIRECTORY.getValue()) != 0;
     }
+
+    @Override
+    public IndexerType getIndexerType() {
+        return IndexerType.SMB;
+    }
 }
 

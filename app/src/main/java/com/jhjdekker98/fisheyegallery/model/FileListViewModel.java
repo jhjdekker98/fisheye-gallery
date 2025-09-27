@@ -2,6 +2,7 @@ package com.jhjdekker98.fisheyegallery.model;
 
 import android.app.Application;
 import android.content.ContentResolver;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Handler;
@@ -14,19 +15,24 @@ import androidx.documentfile.provider.DocumentFile;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.model.mediacache.MediaCacheItem;
 import com.jhjdekker98.fisheyegallery.model.mediacache.MediaCacheRepository;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.IMediaIndexer;
+import com.jhjdekker98.fisheyegallery.model.mediaindexer.IndexerType;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 
 public class FileListViewModel extends AndroidViewModel {
     private static final int CACHE_BATCH_SIZE = 100;
@@ -50,19 +56,16 @@ public class FileListViewModel extends AndroidViewModel {
         return groupedMediaLive;
     }
 
-    /**
-     * Load cached URIs in batches, post to UI, then start indexers.
-     */
-    public void loadCacheThenIndex(List<IMediaIndexer> indexers) {
-        stopIndexing(); // cancel any running indexers
-        if (executor != null) {
-            executor.shutdownNow(); // cancel any previously running tasks
-        }
+    // --- Load cache, then run indexers ---
+    public void loadCacheThenIndex(List<IMediaIndexer> indexers, Supplier<SharedPreferences> prefsSupplier) {
+        stopIndexing();
+        if (executor != null) executor.shutdownNow();
         executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
             int skip = 0;
             final List<MediaCacheItem> batch = new ArrayList<>();
+            final SharedPreferences prefs = prefsSupplier.get();
 
             do {
                 final CountDownLatch latch = new CountDownLatch(1);
@@ -70,16 +73,26 @@ public class FileListViewModel extends AndroidViewModel {
                 cacheRepo.queryCache(skip, CACHE_BATCH_SIZE, items -> {
                     final List<MediaCacheItem> validItems = new ArrayList<>();
                     final List<MediaCacheItem> staleItems = new ArrayList<>();
+
                     items.forEach(mci -> {
                         boolean fileExists = checkUriExists(Uri.parse(mci.uri));
-                        (fileExists ? validItems : staleItems).add(mci);
+                        boolean acceptedBySettings = indexerTypeAcceptedByCurrentSettings(mci.indexerType, prefs);
+                        if (fileExists && acceptedBySettings) {
+                            validItems.add(mci);
+                        } else {
+                            staleItems.add(mci);
+                        }
                     });
+
                     processNewCacheItems(validItems, true);
-                    batch.clear();
-                    batch.addAll(validItems);
+
                     if (!staleItems.isEmpty()) {
                         cacheRepo.deleteFromCache(staleItems);
+                        removeFromMapsAndUi(staleItems);
                     }
+
+                    batch.clear();
+                    batch.addAll(validItems);
                     latch.countDown();
                 });
 
@@ -97,50 +110,60 @@ public class FileListViewModel extends AndroidViewModel {
         });
     }
 
-    /**
-     * Process cache items or newly indexed items into UI and uriMap.
-     */
+    // --- Process cache/indexed items ---
     private void processNewCacheItems(List<MediaCacheItem> items, boolean forcePost) {
         if (items == null || items.isEmpty()) return;
-
-        boolean anyAdded = forcePost;
-        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        final List<GalleryItem> batchForUI = new ArrayList<>();
 
         synchronized (uriMap) {
             for (MediaCacheItem item : items) {
                 Uri u = Uri.parse(item.uri);
                 if (!uriMap.containsKey(item.key)) {
                     uriMap.put(item.key, u);
-                    anyAdded = true;
 
-                    String dayKey = sdf.format(new Date(item.lastModified));
+                    String dayKey = formatDay(item.lastModified);
                     List<GalleryItem.Image> dayList = groupedMap.computeIfAbsent(dayKey, k -> new ArrayList<>());
-                    GalleryItem.Image imageItem = new GalleryItem.Image(u);
-                    dayList.add(imageItem);
-
-                    if (dayList.size() == 1) batchForUI.add(new GalleryItem.Header(dayKey));
-                    batchForUI.add(imageItem);
+                    dayList.add(new GalleryItem.Image(u, item.indexerType));
                 }
             }
         }
 
-        if (anyAdded) {
-            mainHandler.post(() -> {
-                List<GalleryItem> current = groupedMediaLive.getValue();
-                if (current == null) current = new ArrayList<>();
-                current.addAll(batchForUI);
-                groupedMediaLive.setValue(current);
-            });
-        }
+        if (forcePost) rebuildAndPost();
+        else mainHandler.post(this::rebuildAndPost);
     }
 
-    /**
-     * Called by indexers when new media is found.
-     */
-    private void processNewUris(List<Uri> newUris, boolean forcePost) {
-        if (newUris == null || newUris.isEmpty()) return;
+    private void removeFromMapsAndUi(List<MediaCacheItem> staleItems) {
+        synchronized (uriMap) {
+            for (MediaCacheItem mci : staleItems) {
+                uriMap.remove(mci.key);
+                groupedMap.values().forEach(list ->
+                        list.removeIf(img -> img.uri.toString().equals(mci.uri))
+                );
+            }
+        }
+        rebuildAndPost();
+    }
 
+    private void rebuildAndPost() {
+        List<GalleryItem> rebuilt = new ArrayList<>();
+        // Sort day keys descending (newest first)
+        List<String> sortedKeys = new ArrayList<>(groupedMap.keySet());
+        sortedKeys.sort(Comparator.reverseOrder());
+
+        for (String dayKey : sortedKeys) {
+            List<GalleryItem.Image> images = groupedMap.get(dayKey);
+            if (images == null || images.isEmpty()) continue;
+            rebuilt.add(new GalleryItem.Header(dayKey));
+            rebuilt.addAll(images);
+        }
+
+        mainHandler.post(() -> {
+            groupedMediaLive.setValue(rebuilt);
+        });
+    }
+
+    // --- Indexing callbacks ---
+    private void processNewUris(List<Uri> newUris, IndexerType indexerType, boolean forcePost) {
+        if (newUris == null || newUris.isEmpty()) return;
         final List<MediaCacheItem> cacheItems = new ArrayList<>();
 
         for (Uri uri : newUris) {
@@ -148,30 +171,15 @@ public class FileListViewModel extends AndroidViewModel {
             cacheItems.add(new MediaCacheItem(
                     key,
                     uri.toString(),
-                    null, // TODO: Implement album name
+                    null,
+                    indexerType,
                     getFileDate(uri)));
         }
 
         processNewCacheItems(cacheItems, forcePost);
-
-        // Persist new items to Room
         cacheRepo.updateCache(cacheItems);
     }
 
-    private boolean checkUriExists(Uri uri) {
-        try {
-            if ("file".equals(uri.getScheme())) return new File(uri.getPath()).exists();
-            if ("content".equals(uri.getScheme())) {
-                DocumentFile df = DocumentFile.fromSingleUri(getApplication(), uri);
-                return df != null && df.exists();
-            }
-            return false;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    // --- Indexing logic ---
     private synchronized void startIndexing(List<IMediaIndexer> indexers) {
         stopIndexing();
         if (indexers == null || indexers.isEmpty()) return;
@@ -181,7 +189,7 @@ public class FileListViewModel extends AndroidViewModel {
             idx.startIndexing(new IMediaIndexer.Callback() {
                 @Override
                 public void onMediaFound(List<Uri> newUris) {
-                    processNewUris(newUris, false);
+                    processNewUris(newUris, idx.getIndexerType(), false);
                 }
 
                 @Override
@@ -211,12 +219,24 @@ public class FileListViewModel extends AndroidViewModel {
         executor.shutdownNow();
     }
 
-    // --- Utility methods ---
+    // --- Helpers ---
+    private boolean checkUriExists(Uri uri) {
+        try {
+            if ("file".equals(uri.getScheme())) return new File(uri.getPath()).exists();
+            if ("content".equals(uri.getScheme())) {
+                DocumentFile df = DocumentFile.fromSingleUri(getApplication(), uri);
+                return df != null && df.exists();
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private String normalizeKey(Uri uri) {
         if (uri == null) return "";
 
         final ContentResolver resolver = getApplication().getContentResolver();
-
         if ("media".equals(uri.getAuthority())) {
             try (Cursor c = resolver.query(uri,
                     new String[]{MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.RELATIVE_PATH},
@@ -226,13 +246,12 @@ public class FileListViewModel extends AndroidViewModel {
                     final String path = c.getString(1) == null ? "" : c.getString(1);
                     return path + name;
                 }
-            } catch (NullPointerException e) {
+            } catch (Exception e) {
                 return uri.toString();
             }
         }
 
         if (uri.getAuthority() == null) return uri.toString();
-
         if (DocumentsContract.isDocumentUri(getApplication(), uri)) {
             final String docId = DocumentsContract.getDocumentId(uri);
             if (docId != null && docId.startsWith("primary:")) {
@@ -248,12 +267,14 @@ public class FileListViewModel extends AndroidViewModel {
     private long getFileDate(Uri uri) {
         final ContentResolver resolver = getApplication().getContentResolver();
 
-        if ("media".equals(uri.getAuthority())) {
+        if ("com.jhjdekker98.fisheyegallery.smb".equals(uri.getAuthority()) ||
+                "media".equals(uri.getAuthority())) {
             try (Cursor cursor = resolver.query(
                     uri,
                     new String[]{MediaStore.MediaColumns.DATE_TAKEN, MediaStore.MediaColumns.DATE_MODIFIED},
                     null, null, null)) {
                 if (cursor != null && cursor.moveToFirst()) {
+                    if (cursor.getColumnCount() == 1) return cursor.getLong(0);
                     long dateTaken = cursor.getLong(0);
                     long dateModified = cursor.getLong(1);
                     return dateTaken > 0 ? dateTaken : dateModified * 1000;
@@ -266,4 +287,21 @@ public class FileListViewModel extends AndroidViewModel {
 
         return System.currentTimeMillis();
     }
+
+    private String formatDay(long millis) {
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(millis));
+    }
+
+    private boolean indexerTypeAcceptedByCurrentSettings(IndexerType indexerType, SharedPreferences prefs) {
+        switch (indexerType) {
+            case MEDIASTORE:
+                return prefs.getBoolean(Constants.SHARED_PREFS_KEY_USE_MEDIASTORE, true);
+            case SAF:
+                return !prefs.getStringSet(Constants.SHARED_PREFS_KEY_SAF_FOLDERS, new HashSet<>()).isEmpty();
+            case SMB:
+                return !prefs.getStringSet(Constants.SECURE_SHARED_PREFS_KEY_SMB_CONNS, new HashSet<>()).isEmpty();
+        }
+        return true;
+    }
 }
+

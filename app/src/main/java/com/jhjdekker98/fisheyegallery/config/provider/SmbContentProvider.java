@@ -4,17 +4,21 @@ import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.provider.MediaStore;
 import android.webkit.MimeTypeMap;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.hierynomus.msdtyp.AccessMask;
 import com.hierynomus.msfscc.FileAttributes;
+import com.hierynomus.msfscc.fileinformation.FileAllInformation;
 import com.hierynomus.mssmb2.SMB2CreateDisposition;
 import com.hierynomus.mssmb2.SMB2CreateOptions;
 import com.hierynomus.mssmb2.SMB2ShareAccess;
 import com.hierynomus.smbj.SMBClient;
+import com.hierynomus.smbj.auth.AuthenticationContext;
 import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
@@ -48,8 +52,48 @@ public class SmbContentProvider extends ContentProvider {
     @Override
     public Cursor query(@NonNull Uri uri, @Nullable String[] projection,
                         @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
-        return null;
+        try {
+            List<String> segments = uri.getPathSegments();
+            if (segments.size() < 2) throw new FileNotFoundException("Invalid SMB URI");
+
+            String host = segments.get(0);
+            String shareName = segments.get(1);
+            String smbPath = String.join("/", segments.subList(2, segments.size()));
+
+            // auth & connect
+            final SecureStorageHelper ssh = SecureStorageHelper.getInstance(getContext().getApplicationContext());
+            Map<String, SmbCredentials> credsMap = SmbCredentials.getSmbCredentials(ssh);
+            SmbCredentials creds = credsMap.get(host + "/" + shareName);
+            SMBClient client = new SMBClient();
+            Connection connection = client.connect(host);
+            Session session = connection.authenticate(
+                    new AuthenticationContext(creds.username, creds.password.toCharArray(), null)
+            );
+            DiskShare share = (DiskShare) session.connectShare(shareName);
+
+            // query metadata
+            FileAllInformation info = share.getFileInformation(smbPath);
+            long lastModified = info.getBasicInformation().getLastWriteTime().toEpochMillis();
+
+            // build cursor
+            MatrixCursor cursor = new MatrixCursor(new String[]{
+                    MediaStore.MediaColumns.DATE_MODIFIED
+            });
+            cursor.addRow(new Object[]{lastModified});
+
+            // cleanup
+            share.close();
+            session.close();
+            connection.close();
+            client.close();
+
+            return cursor;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
+
 
     @Nullable
     @Override

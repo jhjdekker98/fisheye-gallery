@@ -3,6 +3,7 @@ package com.jhjdekker98.fisheyegallery.config.smb;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.InputType;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -10,6 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
+import com.google.gson.Gson;
 import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.R;
 import com.jhjdekker98.fisheyegallery.config.ISettingsController;
@@ -72,6 +74,7 @@ public class SmbSettingsController implements ISettingsController {
 
         // Save SMB credentials
         final SecureStorageHelper ssh = SecureStorageHelper.getInstance(context.getApplicationContext());
+        SmbCredentials.clearSmbCredentials(ssh);
         for (SmbCredentials creds : smbCredsList) {
             SmbCredentials.saveSmbCredentials(ssh, creds);
         }
@@ -148,7 +151,9 @@ public class SmbSettingsController implements ISettingsController {
         btnDelete.setScaleType(ImageButton.ScaleType.CENTER_INSIDE);
         btnDelete.setOnClickListener(v -> {
             folderListContainer.removeView(container);
+            Log.d("SmbSettingsController", "smbCredsList before: " + new Gson().toJson(smbCredsList));
             smbCredsList.remove(creds);
+            Log.d("SmbSettingsController", "smbCredsList after: " + new Gson().toJson(smbCredsList));
         });
 
         container.addView(tv);
@@ -195,6 +200,6 @@ public class SmbSettingsController implements ISettingsController {
     }
 
     private String smbCredentialsToFolderString(SmbCredentials creds) {
-        return creds.username + "@" + creds.host + "/" + creds.share;
+        return creds.username + "@" + creds.host + "/" + creds.share + "/" + creds.rootPath;
     }
 }
