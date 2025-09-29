@@ -62,6 +62,19 @@
                     android:layout_marginStart="32dp"
                     android:visibility="gone"
                     app:tint="?attr/colorOnSurface"/>
+
+            <ImageButton
+                    android:id="@+id/btnMoveToCloud"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:scaleType="centerCrop"
+                    android:adjustViewBounds="true"
+                    android:src="@drawable/md_cloud_upload_24px"
+                    android:contentDescription="Move to cloud"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_marginStart="32dp"
+                    android:visibility="gone"
+                    app:tint="?attr/colorOnSurface"/>
         </LinearLayout>
     </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

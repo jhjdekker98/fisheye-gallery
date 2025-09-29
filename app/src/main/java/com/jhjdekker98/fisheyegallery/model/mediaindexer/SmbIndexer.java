@@ -10,6 +10,7 @@ import com.hierynomus.smbj.auth.AuthenticationContext;
 import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
+import com.jhjdekker98.fisheyegallery.Constants;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -41,7 +42,7 @@ public class SmbIndexer implements IMediaIndexer {
         String cleanPath = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
         return new Uri.Builder()
                 .scheme("content")
-                .authority("com.jhjdekker98.fisheyegallery.smb")
+                .authority(Constants.SMB_CONTENT_AUTHORITY)
                 .encodedPath(host + "/" + share + "/" + cleanPath)
                 .build();
     }

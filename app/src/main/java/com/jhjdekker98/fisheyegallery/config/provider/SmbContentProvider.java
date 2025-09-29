@@ -22,6 +22,7 @@ import com.hierynomus.smbj.auth.AuthenticationContext;
 import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
+import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.config.smb.SmbCredentials;
 import com.jhjdekker98.fisheyegallery.security.SecureStorageHelper;
 import java.io.FileNotFoundException;
@@ -34,13 +35,11 @@ import java.util.Map;
 import java.util.UUID;
 
 public class SmbContentProvider extends ContentProvider {
-
-    private static final String AUTHORITY = "com.jhjdekker98.fisheyegallery.smb";
     private static final int SMB_FILE = 1;
     private static final UriMatcher matcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     static {
-        matcher.addURI(AUTHORITY, "*", SMB_FILE);
+        matcher.addURI(Constants.SMB_CONTENT_AUTHORITY, "*", SMB_FILE);
     }
 
     @Override
@@ -168,7 +167,7 @@ public class SmbContentProvider extends ContentProvider {
             java.io.File cacheFile = new java.io.File(getContext().getCacheDir(), UUID.randomUUID().toString());
             try (InputStream in = smbFile.getInputStream();
                  FileOutputStream out = new FileOutputStream(cacheFile)) {
-                byte[] buffer = new byte[8192];
+                byte[] buffer = new byte[Constants.BUFFER_SIZE];
                 int read;
                 while ((read = in.read(buffer)) != -1) {
                     out.write(buffer, 0, read);

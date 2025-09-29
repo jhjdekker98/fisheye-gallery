@@ -19,6 +19,7 @@ import com.hierynomus.smbj.SMBClient;
 import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
+import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.security.SecureStorageHelper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,8 +45,7 @@ public class SmbUriLoader implements ModelLoader<Uri, InputStream> {
 
     @Override
     public boolean handles(@NonNull Uri uri) {
-        return "content".equals(uri.getScheme()) &&
-                "com.jhjdekker98.fisheyegallery.smb".equals(uri.getAuthority());
+        return "content".equals(uri.getScheme()) && Constants.SMB_CONTENT_AUTHORITY.equals(uri.getAuthority());
     }
 
     // --- DataFetcher ---

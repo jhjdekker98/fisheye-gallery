@@ -20,6 +20,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import com.bumptech.glide.Glide;
 import com.jhjdekker98.fisheyegallery.R;
+import com.jhjdekker98.fisheyegallery.config.smb.SmbTransferHelper;
+import com.jhjdekker98.fisheyegallery.config.smb.TransferCallback;
 
 public class FullImageActivity extends AppCompatActivity {
     public static final String EXTRA_IMAGE_URI = "extra_image_uri";
@@ -39,11 +41,24 @@ public class FullImageActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_full_image);
 
+        final SmbTransferHelper smbTransferHelper = new SmbTransferHelper(this, new TransferCallback() {
+            @Override
+            public void onSuccess(String message) {
+                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(String message, Exception e) {
+                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+            }
+        });
+
         fullImageView = findViewById(R.id.fullImageView);
 
         ImageButton btnShare = findViewById(R.id.btnShare);
         ImageButton btnEdit = findViewById(R.id.btnEdit);
         ImageButton btnDownload = findViewById(R.id.btnDownload);
+        ImageButton btnMoveToCloud = findViewById(R.id.btnMoveToCloud);
 
         final Uri imageUri;
         final boolean isLocal;
@@ -57,6 +72,12 @@ public class FullImageActivity extends AppCompatActivity {
 
         // Load image
         if (imageUri != null) {
+            // Make SAF image files removable
+            if (imageUri.toString().startsWith("content://com.android.")) {
+                final int takeFlags = getIntent().getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                getContentResolver().takePersistableUriPermission(imageUri, takeFlags);
+            }
+
             final Bitmap thumbnailBitmap = getIntent().getParcelableExtra(EXTRA_THUMBNAIL);
             final Drawable thumbnail = thumbnailBitmap == null ?
                     ContextCompat.getDrawable(this, R.drawable.noimg) :
@@ -98,9 +119,10 @@ public class FullImageActivity extends AppCompatActivity {
 
         if (!isLocal) {
             btnDownload.setVisibility(View.VISIBLE);
-            btnDownload.setOnClickListener(v ->
-                    Toast.makeText(this, "Download not implemented yet", Toast.LENGTH_SHORT).show()
-            );
+            btnDownload.setOnClickListener(v -> smbTransferHelper.downloadToLocal(this, imageUri));
+        } else {
+            btnMoveToCloud.setVisibility(View.VISIBLE);
+            btnMoveToCloud.setOnClickListener(v -> smbTransferHelper.uploadToSmb(this, imageUri));
         }
 
         btnShare.setOnClickListener(v -> {

@@ -23,6 +23,7 @@ import com.jhjdekker98.fisheyegallery.model.mediacache.MediaCacheRepository;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.IMediaIndexer;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.IndexerType;
 import com.jhjdekker98.fisheyegallery.security.SecureStorageHelper;
+import com.jhjdekker98.fisheyegallery.util.FileHelper;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -81,9 +82,6 @@ public class FileListViewModel extends AndroidViewModel {
                     items.forEach(mci -> {
                         boolean fileExists = checkUriExists(Uri.parse(mci.uri));
                         boolean acceptedBySettings = indexerTypeAcceptedByCurrentSettings(mci.indexerType, context);
-                        Log.d("FileListViewModel", "Uri: " + mci.uri +
-                                "\n\texists: " + fileExists +
-                                "\n\taccepted: " + acceptedBySettings);
                         if (fileExists && acceptedBySettings) {
                             validItems.add(mci);
                         } else {
@@ -180,7 +178,7 @@ public class FileListViewModel extends AndroidViewModel {
                     uri.toString(),
                     null,
                     indexerType,
-                    getFileDate(uri)));
+                    FileHelper.getFileDate(getApplication(), uri)));
         }
 
         processNewCacheItems(cacheItems, forcePost);
@@ -269,30 +267,6 @@ public class FileListViewModel extends AndroidViewModel {
         }
 
         return uri.toString();
-    }
-
-    private long getFileDate(Uri uri) {
-        final ContentResolver resolver = getApplication().getContentResolver();
-
-        if ("com.jhjdekker98.fisheyegallery.smb".equals(uri.getAuthority()) ||
-                "media".equals(uri.getAuthority())) {
-            try (Cursor cursor = resolver.query(
-                    uri,
-                    new String[]{MediaStore.MediaColumns.DATE_TAKEN, MediaStore.MediaColumns.DATE_MODIFIED},
-                    null, null, null)) {
-                if (cursor != null && cursor.moveToFirst()) {
-                    if (cursor.getColumnCount() == 1) return cursor.getLong(0);
-                    long dateTaken = cursor.getLong(0);
-                    long dateModified = cursor.getLong(1);
-                    return dateTaken > 0 ? dateTaken : dateModified * 1000;
-                }
-            }
-        }
-
-        DocumentFile file = DocumentFile.fromSingleUri(getApplication(), uri);
-        if (file != null && file.exists()) return file.lastModified();
-
-        return System.currentTimeMillis();
     }
 
     private String formatDay(long millis) {

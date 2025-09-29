@@ -16,6 +16,7 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityOptionsCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.jhjdekker98.fisheyegallery.Constants;
 import com.jhjdekker98.fisheyegallery.R;
 import com.jhjdekker98.fisheyegallery.activity.FullImageActivity;
 import com.jhjdekker98.fisheyegallery.model.GalleryItem;
@@ -50,7 +51,7 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             if (authority != null && authority.startsWith("media")) {
                 return true;
             }
-            if ("com.jhjdekker98.fisheyegallery.smb".equals(authority)) {
+            if (Constants.SMB_CONTENT_AUTHORITY.equals(authority)) {
                 return false; //Custom SMB Content Provider
             }
             // Unknown provider - assume cloud
@@ -100,6 +101,7 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
             imageHolder.imageView.setOnClickListener(v -> {
                 final Intent intent = new Intent(v.getContext(), FullImageActivity.class);
+                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 intent.putExtra(FullImageActivity.EXTRA_IMAGE_URI, imageItem.uri);
                 intent.putExtra(FullImageActivity.EXTRA_IMAGE_LOCAL, isLocal);
 

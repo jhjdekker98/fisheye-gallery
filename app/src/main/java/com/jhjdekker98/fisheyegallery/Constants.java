@@ -10,6 +10,7 @@ public class Constants {
     public static final int PERMISSION_REQUEST_ID = 1;
     public static final int CONFIG_REQUEST_ID = 2;
     public static final int STORAGE_AREA_REQUEST_ID = 3;
+    public static final int DELETE_MEDIASTORE_FILE_REQUEST_ID = 4;
 
     // --- Shared Preferences ---
     public static final String SHARED_PREFS_NAME = "app_config";
@@ -21,6 +22,10 @@ public class Constants {
     public static final String SAF_SEPARATOR = ";";
 
     public static final String SECURE_SHARED_PREFS_KEY_SMB_CONNS = "smb_conns";
+
+    // --- Other ---
+    public static final int BUFFER_SIZE = 8192; //8kb
+    public static final String SMB_CONTENT_AUTHORITY = "com.jhjdekker98.fisheyegallery.smb";
 
 
     public static final Map<Integer, String> THEME_LOOKUP = CollectionUtil.mapOf(
