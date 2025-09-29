@@ -207,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Start indexing
-        viewModel.loadCacheThenIndex(indexers, () -> getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE));
+        viewModel.loadCacheThenIndex(indexers);
     }
 
     private static class SpanSizeLookup extends GridLayoutManager.SpanSizeLookup {

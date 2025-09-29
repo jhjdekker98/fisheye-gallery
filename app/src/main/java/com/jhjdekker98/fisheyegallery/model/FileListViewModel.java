@@ -2,6 +2,7 @@ package com.jhjdekker98.fisheyegallery.model;
 
 import android.app.Application;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
@@ -16,10 +17,12 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import com.jhjdekker98.fisheyegallery.Constants;
+import com.jhjdekker98.fisheyegallery.config.smb.SmbCredentials;
 import com.jhjdekker98.fisheyegallery.model.mediacache.MediaCacheItem;
 import com.jhjdekker98.fisheyegallery.model.mediacache.MediaCacheRepository;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.IMediaIndexer;
 import com.jhjdekker98.fisheyegallery.model.mediaindexer.IndexerType;
+import com.jhjdekker98.fisheyegallery.security.SecureStorageHelper;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -32,7 +35,8 @@ import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
+
+import static android.content.Context.MODE_PRIVATE;
 
 public class FileListViewModel extends AndroidViewModel {
     private static final int CACHE_BATCH_SIZE = 100;
@@ -57,7 +61,7 @@ public class FileListViewModel extends AndroidViewModel {
     }
 
     // --- Load cache, then run indexers ---
-    public void loadCacheThenIndex(List<IMediaIndexer> indexers, Supplier<SharedPreferences> prefsSupplier) {
+    public void loadCacheThenIndex(List<IMediaIndexer> indexers) {
         stopIndexing();
         if (executor != null) executor.shutdownNow();
         executor = Executors.newSingleThreadExecutor();
@@ -65,7 +69,7 @@ public class FileListViewModel extends AndroidViewModel {
         executor.execute(() -> {
             int skip = 0;
             final List<MediaCacheItem> batch = new ArrayList<>();
-            final SharedPreferences prefs = prefsSupplier.get();
+            final Context context = getApplication();
 
             do {
                 final CountDownLatch latch = new CountDownLatch(1);
@@ -76,7 +80,10 @@ public class FileListViewModel extends AndroidViewModel {
 
                     items.forEach(mci -> {
                         boolean fileExists = checkUriExists(Uri.parse(mci.uri));
-                        boolean acceptedBySettings = indexerTypeAcceptedByCurrentSettings(mci.indexerType, prefs);
+                        boolean acceptedBySettings = indexerTypeAcceptedByCurrentSettings(mci.indexerType, context);
+                        Log.d("FileListViewModel", "Uri: " + mci.uri +
+                                "\n\texists: " + fileExists +
+                                "\n\taccepted: " + acceptedBySettings);
                         if (fileExists && acceptedBySettings) {
                             validItems.add(mci);
                         } else {
@@ -292,14 +299,17 @@ public class FileListViewModel extends AndroidViewModel {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(millis));
     }
 
-    private boolean indexerTypeAcceptedByCurrentSettings(IndexerType indexerType, SharedPreferences prefs) {
+    private boolean indexerTypeAcceptedByCurrentSettings(IndexerType indexerType, Context context) {
+        final SharedPreferences prefs = context.getSharedPreferences(Constants.SHARED_PREFS_NAME, MODE_PRIVATE);
+        final SecureStorageHelper ssh = SecureStorageHelper.getInstance(context);
+
         switch (indexerType) {
             case MEDIASTORE:
                 return prefs.getBoolean(Constants.SHARED_PREFS_KEY_USE_MEDIASTORE, true);
             case SAF:
                 return !prefs.getStringSet(Constants.SHARED_PREFS_KEY_SAF_FOLDERS, new HashSet<>()).isEmpty();
             case SMB:
-                return !prefs.getStringSet(Constants.SECURE_SHARED_PREFS_KEY_SMB_CONNS, new HashSet<>()).isEmpty();
+                return !SmbCredentials.getSmbCredentials(ssh).isEmpty();
         }
         return true;
     }
