@@ -3,4 +3,5 @@
     <string name="app_footer">Fisheye Gallery v0.0.1 – 2025 jhjdekker98</string>
     <string name="image_transition">image_transition</string>
     <string name="cloud_icon_desc">This is a remote resource</string>
+    <string name="videocam_icon_desc">This is a playable video file</string>
 </resources>

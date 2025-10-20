@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         // ViewModel
-        adapter = new MediaAdapter();
+        adapter = new MediaAdapter(getContentResolver());
         final int columns = prefs.getInt(Constants.SHARED_PREFS_KEY_COLUMNS, 3);
         final GridLayoutManager layoutManager = new GridLayoutManager(this, columns);
         layoutManager.setSpanSizeLookup(new SpanSizeLookup(adapter, columns));

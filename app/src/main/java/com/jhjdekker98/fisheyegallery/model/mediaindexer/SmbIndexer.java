@@ -2,7 +2,6 @@ package com.jhjdekker98.fisheyegallery.model.mediaindexer;
 
 import android.net.Uri;
 import android.util.Log;
-import android.webkit.MimeTypeMap;
 import com.hierynomus.msfscc.FileAttributes;
 import com.hierynomus.msfscc.fileinformation.FileIdBothDirectoryInformation;
 import com.hierynomus.smbj.SMBClient;
@@ -11,6 +10,7 @@ import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
 import com.jhjdekker98.fisheyegallery.Constants;
+import com.jhjdekker98.fisheyegallery.util.FileHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -80,22 +80,21 @@ public class SmbIndexer implements IMediaIndexer {
         for (FileIdBothDirectoryInformation f : share.list(path)) {
             if (canceled) return;
 
-            String name = f.getFileName();
+            final String name = f.getFileName();
             if (name.equals(".") || name.equals("..")) continue;
 
-            String fullPath = path.isEmpty() ? name : path + "/" + name;
+            final String fullPath = path.isEmpty() ? name : path + "/" + name;
 
             if (isDirectory(f)) {
                 walkDirectory(share, fullPath, currentDepth + 1, callback);
             } else {
                 // MIME type filter
-                String extension = MimeTypeMap.getFileExtensionFromUrl(name);
-                String mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+                final String mimeType = FileHelper.getFileMimeType(name);
                 if (mimeType == null || !(mimeType.startsWith("image/") || mimeType.startsWith("video/"))) {
                     continue; // skip non-media files
                 }
 
-                Uri uri = SmbIndexer.getContentUri(host, this.share, fullPath);
+                final Uri uri = SmbIndexer.getContentUri(host, this.share, fullPath);
                 batch.add(uri);
 
                 if (batch.size() >= BATCH_SIZE) {

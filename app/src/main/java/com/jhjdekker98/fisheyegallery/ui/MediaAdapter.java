@@ -1,6 +1,7 @@
 package com.jhjdekker98.fisheyegallery.ui;
 
 import android.app.Activity;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -21,6 +22,7 @@ import com.jhjdekker98.fisheyegallery.R;
 import com.jhjdekker98.fisheyegallery.activity.FullImageActivity;
 import com.jhjdekker98.fisheyegallery.model.GalleryItem;
 import com.jhjdekker98.fisheyegallery.util.CollectionUtil;
+import com.jhjdekker98.fisheyegallery.util.FileHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -35,6 +37,11 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             "cifs"); //TODO: Find reliable source and expand
 
     private final List<GalleryItem> items = new ArrayList<>();
+    private final ContentResolver contentResolver;
+
+    public MediaAdapter(ContentResolver contentResolver) {
+        this.contentResolver = contentResolver;
+    }
 
     private boolean isLocal(Uri uri) {
         // Only used for local filesystem
@@ -97,7 +104,7 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             final GalleryItem.Image imageItem = (GalleryItem.Image) item;
             final boolean isLocal = isLocal(imageItem.uri);
 
-            imageHolder.bind(imageItem.uri, isLocal);
+            imageHolder.bind(imageItem.uri, isLocal, contentResolver);
 
             imageHolder.imageView.setOnClickListener(v -> {
                 final Intent intent = new Intent(v.getContext(), FullImageActivity.class);
@@ -141,20 +148,24 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     static class ImageViewHolder extends RecyclerView.ViewHolder {
         private final ImageView imageView;
         private final ImageView cloudIcon;
+        private final ImageView videoIcon;
 
         ImageViewHolder(View itemView) {
             super(itemView);
             imageView = itemView.findViewById(R.id.imageButton);
             cloudIcon = itemView.findViewById(R.id.cloudIcon);
+            videoIcon = itemView.findViewById(R.id.videoIcon);
         }
 
-        void bind(Uri uri, boolean isLocal) {
+        void bind(Uri uri, boolean isLocal, ContentResolver contentResolver) {
             Glide.with(imageView.getContext())
                     .load(uri)
                     .centerCrop()
                     .into(imageView);
 
             cloudIcon.setVisibility(isLocal ? View.GONE : View.VISIBLE);
+            final String mimeType = FileHelper.getFileMimeType(uri, contentResolver);
+            videoIcon.setVisibility(mimeType.startsWith("video/") ? View.VISIBLE : View.GONE);
         }
     }
 }

@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.exifinterface.media.ExifInterface;
 import com.jhjdekker98.fisheyegallery.Constants;
@@ -100,6 +101,24 @@ public class FileHelper {
         }
 
         return deletedCount;
+    }
+
+    public static String getFileMimeType(Uri fileUri, ContentResolver contentResolver) {
+        try {
+            final String extension = StringUtil.splitOnLast(fileUri.getLastPathSegment(), '.')[1];
+            return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        } catch (IndexOutOfBoundsException ignored) {
+            return contentResolver.getType(fileUri);
+        }
+    }
+
+    public static String getFileMimeType(String fileName) {
+        try {
+            final String extension = StringUtil.splitOnLast(fileName, '.')[1];
+            return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        } catch (IndexOutOfBoundsException ignored) {
+            return "application/octet-stream";
+        }
     }
 
     /**
