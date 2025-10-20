@@ -21,6 +21,21 @@
             android:src="@drawable/noimg"/>
 
     <ImageView
+            android:id="@+id/videoIcon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_margin="6dp"
+            android:src="@drawable/md_videocam_24px"
+            android:background="@drawable/circle_bg"
+            android:padding="2dp"
+            android:backgroundTint="?attr/colorSurface"
+            android:clipToOutline="true"
+            android:visibility="gone"
+            android:contentDescription="@string/videocam_icon_desc"/>
+
+    <ImageView
             android:id="@+id/cloudIcon"
             android:layout_width="20dp"
             android:layout_height="20dp"

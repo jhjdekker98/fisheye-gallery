@@ -1,6 +1,7 @@
 package com.jhjdekker98.fisheyegallery.activity;
 
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -18,16 +19,22 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.media3.common.MediaItem;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.ui.PlayerView;
 import com.bumptech.glide.Glide;
 import com.jhjdekker98.fisheyegallery.R;
 import com.jhjdekker98.fisheyegallery.config.smb.SmbTransferHelper;
 import com.jhjdekker98.fisheyegallery.config.smb.TransferCallback;
+import com.jhjdekker98.fisheyegallery.util.FileHelper;
 
 public class FullImageActivity extends AppCompatActivity {
     public static final String EXTRA_IMAGE_URI = "extra_image_uri";
     public static final String EXTRA_IMAGE_LOCAL = "extra_image_local";
     public static final String EXTRA_THUMBNAIL = "thumbnail_drawable";
     private ImageView fullImageView;
+    private PlayerView fullVideoView;
+    private ExoPlayer player;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +61,7 @@ public class FullImageActivity extends AppCompatActivity {
         });
 
         fullImageView = findViewById(R.id.fullImageView);
+        fullVideoView = findViewById(R.id.fullVideoView);
 
         ImageButton btnShare = findViewById(R.id.btnShare);
         ImageButton btnEdit = findViewById(R.id.btnEdit);
@@ -71,6 +79,7 @@ public class FullImageActivity extends AppCompatActivity {
         }
 
         // Load image
+        final Context context = this;
         if (imageUri != null) {
             // Make SAF image files removable
             if (imageUri.toString().startsWith("content://com.android.")) {
@@ -99,6 +108,18 @@ public class FullImageActivity extends AppCompatActivity {
                             .error(R.drawable.md_close_24px)
                             .into(fullImageView);
                     transition.removeListener(this);
+
+                    String mimeType = FileHelper.getFileMimeType(imageUri, getContentResolver());
+                    if (mimeType != null && mimeType.startsWith("video/")) {
+                        fullImageView.setVisibility(View.GONE);
+                        fullVideoView.setVisibility(View.VISIBLE);
+                        player = new ExoPlayer.Builder(context).build();
+                        fullVideoView.setPlayer(player);
+                        final MediaItem mediaItem = MediaItem.fromUri(imageUri);
+                        player.setMediaItem(mediaItem);
+                        player.prepare();
+                        player.play();
+                    }
                 }
 
                 @Override
@@ -150,5 +171,13 @@ public class FullImageActivity extends AppCompatActivity {
             }
         });
     }
-}
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (player != null) {
+            player.release();
+            player = null;
+        }
+    }
+}
